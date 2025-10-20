@@ -18,13 +18,12 @@
                 <div class="card">
                     <div class="card-header bg-warning text-dark">
                         <h5 class="mb-0">
-                            <i class="fas fa-edit"></i> Edit Driver - <%= driver.name %>
+                            <i class="fas fa-edit"></i> Edit Driver - <%= driver.full_name %>
                         </h5>
                     </div>
                     <div class="card-body">
                         
-                        <form action="/drivers/<%= driver.id %>" method="POST" id="editDriverForm" novalidate>
-                            <input type="hidden" name="_method" value="PUT">
+                        <form action="/drivers/<%= driver.id %>/edit" method="POST" id="editDriverForm" novalidate>
                             
                             <div class="row">
                                 <!-- Basic Information -->
@@ -32,9 +31,9 @@
                                     <h6 class="text-warning mb-3">Basic Information</h6>
                                     
                                     <div class="mb-3">
-                                        <label for="name" class="form-label">Full Name <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="name" name="name" required 
-                                               value="<%= driver.name %>" placeholder="Enter driver's full name" maxlength="100">
+                                        <label for="full_name" class="form-label">Full Name <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="full_name" name="full_name" required 
+                                               value="<%= driver.full_name %>" placeholder="Enter driver's full name" maxlength="100">
                                         <div class="invalid-feedback">Please provide a valid name.</div>
                                     </div>
 
@@ -48,9 +47,9 @@
                                     </div>
 
                                     <div class="mb-3">
-                                        <label for="phone" class="form-label">Phone Number <span class="text-danger">*</span></label>
-                                        <input type="tel" class="form-control" id="phone" name="phone" required 
-                                               value="<%= driver.phone %>" placeholder="03XX-XXXXXXX" 
+                                        <label for="phone_primary" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                                        <input type="tel" class="form-control" id="phone_primary" name="phone_primary" required 
+                                               value="<%= driver.phone_primary %>" placeholder="03XX-XXXXXXX" 
                                                pattern="03[0-9]{2}-[0-9]{7}" title="Pakistani mobile number format: 03XX-XXXXXXX">
                                         <div class="form-text">Format: 03XX-XXXXXXX</div>
                                         <div class="invalid-feedback">Please provide a valid Pakistani phone number.</div>
@@ -79,10 +78,10 @@
                                         <label for="license_type" class="form-label">License Type <span class="text-danger">*</span></label>
                                         <select class="form-select" id="license_type" name="license_type" required>
                                             <option value="">Select license type</option>
-                                            <option value="LTV" <%= driver.license_type === 'LTV' ? 'selected' : '' %>>LTV (Light Transport Vehicle)</option>
-                                            <option value="HTV" <%= driver.license_type === 'HTV' ? 'selected' : '' %>>HTV (Heavy Transport Vehicle)</option>
-                                            <option value="PSV" <%= driver.license_type === 'PSV' ? 'selected' : '' %>>PSV (Public Service Vehicle)</option>
-                                            <option value="Motorcycle" <%= driver.license_type === 'Motorcycle' ? 'selected' : '' %>>Motorcycle</option>
+                                            <option value="motorcycle" <%= driver.license_type === 'motorcycle' ? 'selected' : '' %>>Motorcycle</option>
+                                            <option value="car" <%= driver.license_type === 'car' ? 'selected' : '' %>>Car (LTV - Light Transport Vehicle)</option>
+                                            <option value="truck" <%= driver.license_type === 'truck' ? 'selected' : '' %>>Truck (HTV - Heavy Transport Vehicle)</option>
+                                            <option value="heavy" <%= driver.license_type === 'heavy' ? 'selected' : '' %>>Heavy Vehicle (PSV - Public Service Vehicle)</option>
                                         </select>
                                         <div class="invalid-feedback">Please select a license type.</div>
                                     </div>
@@ -100,9 +99,9 @@
                                     </div>
 
                                     <div class="mb-3">
-                                        <label for="date_of_joining" class="form-label">Date of Joining <span class="text-danger">*</span></label>
-                                        <input type="date" class="form-control" id="date_of_joining" name="date_of_joining" required
-                                               value="<%= driver.date_of_joining ? driver.date_of_joining.toISOString().split('T')[0] : '' %>">
+                                        <label for="hire_date" class="form-label">Date of Joining <span class="text-danger">*</span></label>
+                                        <input type="date" class="form-control" id="hire_date" name="hire_date" required
+                                               value="<%= driver.hire_date ? driver.hire_date.toISOString().split('T')[0] : '' %>">
                                         <div class="invalid-feedback">Please provide joining date.</div>
                                     </div>
                                 </div>
@@ -125,11 +124,10 @@
                                             </div>
                                         </div>
                                         <div class="col-md-6">
-                                            <% if (driver.assigned_vehicle_id && driver.vehicle) { %>
+                                            <% if (driver.assigned_vehicle_id && driver.vehicle_license_plate) { %>
                                                 <div class="alert alert-info">
                                                     <strong>Currently Assigned:</strong><br>
-                                                    <i class="fas fa-truck"></i> <%= driver.vehicle.license_plate %> - <%= driver.vehicle.vehicle_type %>
-                                                    <br><small>Capacity: <%= driver.vehicle.capacity %>L</small>
+                                                    <i class="fas fa-truck"></i> <%= driver.vehicle_license_plate %> - <%= driver.vehicle_type %>
                                                 </div>
                                             <% } else { %>
                                                 <div class="alert alert-secondary">
@@ -199,7 +197,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Real-time phone formatting
-    const phoneInput = document.getElementById('phone');
+    const phoneInput = document.getElementById('phone_primary');
     phoneInput.addEventListener('input', function(e) {
         let value = e.target.value.replace(/\D/g, '');
         if (value.length >= 4) {
@@ -223,8 +221,8 @@ async function loadAvailableVehicles() {
         // Add current vehicle first if assigned
         const currentVehicleData = {
             id: '<%= driver.assigned_vehicle_id || "" %>',
-            license_plate: '<%= driver.vehicle ? driver.vehicle.license_plate : "" %>',
-            vehicle_type: '<%= driver.vehicle ? driver.vehicle.vehicle_type : "" %>',
+            license_plate: '<%= driver.vehicle_license_plate || "" %>',
+            vehicle_type: '<%= driver.vehicle_type || "" %>',
             capacity: '<%= driver.vehicle ? driver.vehicle.capacity : "" %>'
         };
         

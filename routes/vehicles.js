@@ -230,17 +230,14 @@ router.post('/:id/delete', auth, async (req, res) => {
 router.get('/api/available', auth, async (req, res) => {
     try {
         const vehicles = await Vehicle.getAvailable();
-        res.json({
-            success: true,
-            vehicles: vehicles.map(v => ({
-                id: v.id,
-                license_plate: v.license_plate,
-                vehicle_type: v.vehicle_type,
-                brand: v.brand,
-                model: v.model,
-                capacity: v.capacity
-            }))
-        });
+        res.json(vehicles.map(v => ({
+            id: v.id,
+            license_plate: v.license_plate,
+            vehicle_type: v.vehicle_type,
+            brand: v.brand,
+            model: v.model,
+            capacity: v.capacity
+        })));
     } catch (error) {
         console.error('Error getting available vehicles:', error);
         res.status(500).json({

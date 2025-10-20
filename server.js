@@ -53,11 +53,16 @@ app.use((req, res, next) => {
 });
 
 // Routes
+const assignmentRoutes = require('./routes/assignments');
+const bottleTrackingRoutes = require('./routes/bottle-tracking');
+
 app.use('/auth', authRoutes);
 app.use('/dashboard', dashboardRoutes);
 app.use('/bottles', bottleRoutes);
+app.use('/bottle-tracking', bottleTrackingRoutes);
 app.use('/customers', customerRoutes);
 app.use('/orders', orderRoutes);
+app.use('/assignments', assignmentRoutes);
 app.use('/vehicles', vehicleRoutes);
 app.use('/drivers', driverRoutes);
 

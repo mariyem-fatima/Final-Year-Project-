@@ -219,10 +219,10 @@ class Order {
                 INSERT INTO orders (
                     order_number, customer_id, order_type, subscription_type, bottle_type,
                     quantity_per_delivery, total_bottles_ordered, bottles_remaining,
-                    unit_price, total_amount, start_date, end_date, next_delivery_date,
+                    unit_price, total_amount, order_status, start_date, end_date, next_delivery_date,
                     delivery_address, delivery_instructions, priority_level, custom_delivery_dates,
                     created_by, notes
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
                 RETURNING *
             `;
 
@@ -237,6 +237,7 @@ class Order {
                 bottles_remaining,
                 parseFloat(orderData.unit_price),
                 total_amount,
+                orderData.order_status || 'pending',
                 orderData.start_date,
                 orderData.end_date || null,
                 next_delivery_date,
@@ -550,7 +551,7 @@ class Order {
                 FROM orders o
                 LEFT JOIN customers c ON o.customer_id = c.id
                 WHERE o.next_delivery_date BETWEEN $1 AND $2
-                AND o.order_status IN ('confirmed', 'in-progress')
+                AND o.order_status IN ('pending', 'confirmed', 'in-progress')
                 AND o.bottles_remaining > 0
                 ORDER BY o.next_delivery_date ASC, o.priority_level DESC
             `;

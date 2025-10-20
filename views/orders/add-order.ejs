@@ -121,10 +121,10 @@
                                     <label for="bottle_type" class="form-label">Bottle Type <span class="text-danger">*</span></label>
                                     <select class="form-select" id="bottle_type" name="bottle_type" required>
                                         <option value="">Select Bottle</option>
-                                        <option value="0.5L">0.5 Liter</option>
-                                        <option value="1L">1 Liter</option>
-                                        <option value="5L">5 Liter</option>
-                                        <option value="20L">20 Liter</option>
+                                        <option value="0.5L">0.5 Liter - Rs. 30</option>
+                                        <option value="1L">1 Liter - Rs. 50</option>
+                                        <option value="5L">5 Liter - Rs. 80</option>
+                                        <option value="20L">20 Liter - Rs. 100</option>
                                     </select>
                                 </div>
                                 <div class="col-md-4 mb-3">
@@ -166,6 +166,15 @@
                                         <option value="high">High</option>
                                         <option value="urgent">Urgent</option>
                                         <option value="low">Low</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="order_status" class="form-label">Order Status</label>
+                                    <select class="form-select" id="order_status" name="order_status">
+                                        <option value="pending" selected>Pending</option>
+                                        <option value="confirmed">Confirmed</option>
+                                        <option value="in-progress">In Progress</option>
+                                        <option value="paused">Paused</option>
                                     </select>
                                 </div>
                             </div>
@@ -302,12 +311,35 @@
     <script src="/js/custom-dates.js"></script>
     
     <script>
+        // Bottle price constants from server
+        const BOTTLE_PRICES = <%- JSON.stringify(bottlePrices) %>;
+
         document.addEventListener('DOMContentLoaded', function() {
-            // Set default start date to today
-            document.getElementById('start_date').value = new Date().toISOString().split('T')[0];
+            // Set default start date to today (local time)
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            document.getElementById('start_date').value = `${year}-${month}-${day}`;
 
             // Customer search functionality
             setupCustomerSearch();
+            
+            // Bottle type change handler - automatically set price
+            document.getElementById('bottle_type').addEventListener('change', function() {
+                const selectedBottleType = this.value;
+                const unitPriceInput = document.getElementById('unit_price');
+                
+                if (selectedBottleType && BOTTLE_PRICES[selectedBottleType]) {
+                    unitPriceInput.value = BOTTLE_PRICES[selectedBottleType];
+                    // Add visual feedback
+                    unitPriceInput.style.backgroundColor = '#d4edda';
+                    setTimeout(() => {
+                        unitPriceInput.style.backgroundColor = '';
+                    }, 1000);
+                }
+                updateOrderSummary();
+            });
             
             // Order type change handler
             document.getElementById('order_type').addEventListener('change', function() {

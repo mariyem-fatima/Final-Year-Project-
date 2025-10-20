@@ -3,6 +3,7 @@ const router = express.Router();
 const Order = require('../models/Order');
 const Customer = require('../models/Customer');
 const Bottle = require('../models/Bottle');
+const { BOTTLE_PRICES, getBottlePrice, getAllBottlePrices } = require('../constants/bottlePrices');
 const { isAuthenticated } = require('../middleware/auth');
 const moment = require('moment');
 
@@ -52,6 +53,7 @@ router.get('/add', async (req, res) => {
         res.render('orders/add-order', {
             title: 'Create New Order',
             selectedCustomer,
+            bottlePrices: BOTTLE_PRICES,
             currentUser: req.session.user
         });
     } catch (error) {
@@ -99,6 +101,7 @@ router.post('/add', async (req, res) => {
             delivery_address: req.body.delivery_address?.trim(),
             delivery_instructions: req.body.delivery_instructions?.trim(),
             priority_level: req.body.priority_level || 'normal',
+            order_status: req.body.order_status || 'pending',
             notes: req.body.notes?.trim()
         };
 
@@ -284,32 +287,11 @@ router.post('/:id/status', async (req, res) => {
     }
 });
 
-// Record delivery
-router.post('/:id/delivery', async (req, res) => {
-    try {
-        const deliveryData = {
-            delivered_date: req.body.delivered_date,
-            quantity_delivered: parseInt(req.body.quantity_delivered),
-            delivery_person: req.body.delivery_person?.trim(),
-            delivery_vehicle: req.body.delivery_vehicle?.trim(),
-            delivery_notes: req.body.delivery_notes?.trim()
-        };
-
-        const updatedOrder = await Order.recordDelivery(req.params.id, deliveryData, req.user.id);
-        
-        req.flash('success', `Delivery recorded successfully. ${deliveryData.quantity_delivered} bottles delivered.`);
-        res.redirect(`/orders/${req.params.id}`);
-    } catch (error) {
-        console.error('Error recording delivery:', error);
-        req.flash('error', error.message || 'Failed to record delivery');
-        res.redirect(`/orders/${req.params.id}`);
-    }
-});
-
 // Get delivery schedule
 router.get('/schedule/delivery', async (req, res) => {
     try {
-        const startDate = req.query.start_date || moment().format('YYYY-MM-DD');
+        // Include overdue orders by starting from a week ago
+        const startDate = req.query.start_date || moment().subtract(7, 'days').format('YYYY-MM-DD');
         const endDate = req.query.end_date || moment().add(7, 'days').format('YYYY-MM-DD');
 
         const deliverySchedule = await Order.getDeliverySchedule(startDate, endDate);
@@ -604,6 +586,20 @@ router.get('/export/csv', async (req, res) => {
         console.error('Error exporting orders:', error);
         req.flash('error', 'Failed to export orders');
         res.redirect('/orders');
+    }
+});
+
+// Get bottle prices (AJAX endpoint)
+router.get('/api/bottle-prices', async (req, res) => {
+    try {
+        res.json({
+            success: true,
+            prices: BOTTLE_PRICES,
+            list: getAllBottlePrices()
+        });
+    } catch (error) {
+        console.error('Error fetching bottle prices:', error);
+        res.status(500).json({ error: 'Failed to fetch bottle prices' });
     }
 });
 
