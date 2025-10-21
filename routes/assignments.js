@@ -190,6 +190,66 @@ router.post('/:id/status', async (req, res) => {
     }
 });
 
+// Mark delivery as completed with bottle codes
+router.post('/:id/deliver', async (req, res) => {
+    try {
+        const assignmentId = req.params.id;
+        const { bottle_codes, notes } = req.body;
+        
+        if (!bottle_codes || !Array.isArray(bottle_codes) || bottle_codes.length === 0) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Bottle codes are required for delivery confirmation' 
+            });
+        }
+
+        // Get assignment details
+        const assignment = await OrderAssignment.findById(assignmentId);
+        if (!assignment) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Assignment not found' 
+            });
+        }
+
+        // Validate that number of bottle codes matches order quantity
+        if (bottle_codes.length !== assignment.quantity_per_delivery) {
+            return res.status(400).json({ 
+                success: false, 
+                error: `Expected ${assignment.quantity_per_delivery} bottle codes, but received ${bottle_codes.length}` 
+            });
+        }
+
+        // Process delivery with bottle tracking
+        const result = await OrderAssignment.markDeliveredWithBottles(
+            assignmentId,
+            bottle_codes,
+            req.user.id,
+            notes
+        );
+
+        if (result.success) {
+            res.json({
+                success: true,
+                message: `Delivery completed with ${bottle_codes.length} bottles`,
+                assignment: result.assignment,
+                delivered_bottles: result.delivered_bottles
+            });
+        } else {
+            res.status(400).json({
+                success: false,
+                error: result.error
+            });
+        }
+    } catch (error) {
+        console.error('Error processing delivery:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to process delivery' 
+        });
+    }
+});
+
 // Remove assignment
 router.delete('/:id', async (req, res) => {
     try {

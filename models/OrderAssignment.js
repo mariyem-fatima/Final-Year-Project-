@@ -30,6 +30,38 @@ class OrderAssignment {
         this.vehicle_type = data.vehicle_type;
     }
 
+    // Find assignment by ID
+    static async findById(assignmentId) {
+        try {
+            const query = `
+                SELECT 
+                    oa.*,
+                    o.order_number, o.bottle_type, o.quantity_per_delivery, o.priority_level,
+                    c.full_name as customer_name, c.phone_primary as customer_phone,
+                    COALESCE(o.delivery_address, c.address_line1) as customer_address,
+                    c.city as customer_city,
+                    d.full_name as driver_name, d.phone_primary as driver_phone,
+                    v.license_plate as vehicle_license_plate, v.vehicle_type
+                FROM order_assignments oa
+                LEFT JOIN orders o ON oa.order_id = o.id
+                LEFT JOIN customers c ON o.customer_id = c.id
+                LEFT JOIN drivers d ON oa.driver_id = d.id
+                LEFT JOIN vehicles v ON oa.vehicle_id = v.id
+                WHERE oa.id = $1
+            `;
+
+            const result = await pool.query(query, [assignmentId]);
+            
+            if (result.rows.length === 0) {
+                return null;
+            }
+            
+            return new OrderAssignment(result.rows[0]);
+        } catch (error) {
+            throw error;
+        }
+    }
+
     // Assign order to driver for a specific date
     static async assignOrder(orderData, userId) {
         const client = await pool.connect();
@@ -427,6 +459,120 @@ class OrderAssignment {
             return result.rows;
         } catch (error) {
             throw error;
+        }
+    }
+
+    // Mark delivery as completed with bottle code tracking
+    static async markDeliveredWithBottles(assignmentId, bottleCodes, userId, notes) {
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            // Get assignment details with order and customer info
+            const assignmentQuery = `
+                SELECT oa.*, o.customer_id, o.quantity_per_delivery
+                FROM order_assignments oa
+                JOIN orders o ON oa.order_id = o.id
+                WHERE oa.id = $1
+            `;
+            const assignmentResult = await client.query(assignmentQuery, [assignmentId]);
+            
+            if (assignmentResult.rows.length === 0) {
+                throw new Error('Assignment not found');
+            }
+
+            const assignment = assignmentResult.rows[0];
+
+            // Validate bottle codes exist and are available
+            const bottleValidation = [];
+            const deliveredBottles = [];
+
+            for (const bottleCode of bottleCodes) {
+                // Check if bottle exists and is available
+                const bottleQuery = `
+                    SELECT id, bottle_code, bottle_type, status 
+                    FROM bottles 
+                    WHERE bottle_code = $1
+                `;
+                const bottleResult = await client.query(bottleQuery, [bottleCode]);
+
+                if (bottleResult.rows.length === 0) {
+                    throw new Error(`Bottle code ${bottleCode} not found`);
+                }
+
+                const bottle = bottleResult.rows[0];
+
+                if (bottle.status !== 'AtPlant') {
+                    throw new Error(`Bottle ${bottleCode} is not available (current status: ${bottle.status})`);
+                }
+
+                // Update bottle status to 'AtCustomer'
+                await client.query(
+                    'UPDATE bottles SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+                    ['AtCustomer', bottle.id]
+                );
+
+                // Log bottle status change
+                await client.query(`
+                    INSERT INTO bottle_history (bottle_id, previous_status, new_status, changed_by, change_reason)
+                    VALUES ($1, $2, $3, $4, $5)
+                `, [bottle.id, 'AtPlant', 'AtCustomer', userId, `Delivered to customer via assignment ${assignmentId}`]);
+
+                // Record bottle delivery
+                await client.query(`
+                    INSERT INTO bottle_deliveries (
+                        order_assignment_id, order_id, bottle_id, customer_id, 
+                        bottle_code, driver_id, vehicle_id, delivery_notes, created_by
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                `, [
+                    assignmentId,
+                    assignment.order_id,
+                    bottle.id,
+                    assignment.customer_id,
+                    bottleCode,
+                    assignment.driver_id,
+                    assignment.vehicle_id,
+                    notes,
+                    userId
+                ]);
+
+                deliveredBottles.push({
+                    bottle_code: bottleCode,
+                    bottle_type: bottle.bottle_type,
+                    status: 'AtCustomer'
+                });
+            }
+
+            // Update assignment status to delivered
+            const updateQuery = `
+                UPDATE order_assignments 
+                SET delivery_status = 'delivered',
+                    actual_delivery_time = CURRENT_TIMESTAMP,
+                    notes = COALESCE(notes || E'\\n', '') || $2,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = $1
+                RETURNING *
+            `;
+            
+            const deliveryNotes = notes ? `Delivered with bottles: ${bottleCodes.join(', ')}. ${notes}` : `Delivered with bottles: ${bottleCodes.join(', ')}`;
+            const result = await client.query(updateQuery, [assignmentId, deliveryNotes]);
+
+            await client.query('COMMIT');
+
+            return {
+                success: true,
+                assignment: new OrderAssignment(result.rows[0]),
+                delivered_bottles: deliveredBottles
+            };
+
+        } catch (error) {
+            await client.query('ROLLBACK');
+            return {
+                success: false,
+                error: error.message
+            };
+        } finally {
+            client.release();
         }
     }
 }

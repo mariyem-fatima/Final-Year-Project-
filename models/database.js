@@ -70,6 +70,8 @@ const initializeDatabase = async () => {
                 bottle_type VARCHAR(10) NOT NULL CHECK (bottle_type IN ('0.5L', '1L', '5L', '20L')),
                 qr_code_data TEXT NOT NULL,
                 status VARCHAR(20) DEFAULT 'AtPlant' CHECK (status IN ('AtPlant', 'AtCustomer', 'AtVehicle')),
+                is_refillable BOOLEAN DEFAULT false,
+                current_vehicle_id INTEGER REFERENCES vehicles(id),
                 description TEXT,
                 manufacturing_date DATE DEFAULT CURRENT_DATE,
                 expiry_date DATE,
@@ -92,6 +94,32 @@ const initializeDatabase = async () => {
                 change_reason TEXT,
                 changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
+        `);
+
+        // Create bottle_transfers table for plant-vehicle-customer movement tracking
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS bottle_transfers (
+                id SERIAL PRIMARY KEY,
+                bottle_id INTEGER REFERENCES bottles(id) ON DELETE CASCADE,
+                from_location VARCHAR(20) NOT NULL CHECK (from_location IN ('Plant', 'Vehicle', 'Customer')),
+                to_location VARCHAR(20) NOT NULL CHECK (to_location IN ('Plant', 'Vehicle', 'Customer')),
+                from_vehicle_id INTEGER REFERENCES vehicles(id),
+                to_vehicle_id INTEGER REFERENCES vehicles(id),
+                customer_id INTEGER REFERENCES customers(id),
+                order_assignment_id INTEGER REFERENCES order_assignments(id),
+                scanned_by INTEGER REFERENCES users(id),
+                scan_method VARCHAR(10) DEFAULT 'qr' CHECK (scan_method IN ('qr', 'manual')),
+                scan_location VARCHAR(100),
+                transfer_reason TEXT,
+                transferred_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Add indexes for bottle transfers
+        await pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_bottle_transfers_bottle_id ON bottle_transfers(bottle_id);
+            CREATE INDEX IF NOT EXISTS idx_bottle_transfers_date ON bottle_transfers(transferred_at);
+            CREATE INDEX IF NOT EXISTS idx_bottle_transfers_vehicle ON bottle_transfers(from_vehicle_id, to_vehicle_id);
         `);
 
         // Create customers table
@@ -263,6 +291,36 @@ const initializeDatabase = async () => {
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(order_id, assigned_date)
             )
+        `);
+
+        // Create bottle_deliveries table for tracking delivered bottles
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS bottle_deliveries (
+                id SERIAL PRIMARY KEY,
+                order_assignment_id INTEGER REFERENCES order_assignments(id) ON DELETE CASCADE,
+                order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
+                bottle_id INTEGER REFERENCES bottles(id) ON DELETE CASCADE,
+                customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
+                bottle_code VARCHAR(20) NOT NULL,
+                delivery_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                driver_id INTEGER REFERENCES drivers(id),
+                vehicle_id INTEGER REFERENCES vehicles(id),
+                delivery_notes TEXT,
+                created_by INTEGER REFERENCES users(id),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Add index for quick bottle code lookups
+        await pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_bottle_deliveries_bottle_code 
+            ON bottle_deliveries(bottle_code)
+        `);
+
+        // Add index for customer bottle tracking
+        await pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_bottle_deliveries_customer 
+            ON bottle_deliveries(customer_id, delivery_date)
         `);
 
         // Create default admin user if not exists

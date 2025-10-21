@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bottle QR Scanner - Water Plant Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <%- include('../partials/header') %>
+        </div>
+    </div>
+
+    <div class="container mt-4">
+        <%- include('../partials/flash') %>
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="bi bi-qr-code-scan"></i> Bottle QR Scanner</h2>
+            <div class="btn-group">
+                <a href="/bottle-tracking/plant-operations" class="btn btn-outline-primary">
+                    <i class="bi bi-factory"></i> Plant Operations
+                </a>
+                <a href="/bottle-tracking/deliveries" class="btn btn-outline-success">
+                    <i class="bi bi-truck"></i> Delivery Tracking
+                </a>
+            </div>
+        </div>
+
+        <!-- Scanner Mode Selection -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="bi bi-gear"></i> Scanner Mode</h5>
+            </div>
+            <div class="card-body">
+                <div class="btn-group w-100" role="group">
+                    <input type="radio" class="btn-check" name="scannerMode" id="viewMode" value="view" checked>
+                    <label class="btn btn-outline-info" for="viewMode">
+                        <i class="bi bi-eye"></i> View Bottle Info
+                    </label>
+                    
+                    <input type="radio" class="btn-check" name="scannerMode" id="transferMode" value="transfer">
+                    <label class="btn btn-outline-warning" for="transferMode">
+                        <i class="bi bi-arrow-left-right"></i> Transfer Bottle
+                    </label>
+                    
+                    <input type="radio" class="btn-check" name="scannerMode" id="deliveryMode" value="delivery">
+                    <label class="btn btn-outline-success" for="deliveryMode">
+                        <i class="bi bi-truck"></i> Delivery Mode
+                    </label>
+                    
+                    <input type="radio" class="btn-check" name="scannerMode" id="returnMode" value="return">
+                    <label class="btn btn-outline-primary" for="returnMode">
+                        <i class="bi bi-arrow-return-left"></i> Return Mode
+                    </label>
+                </div>
+                
+                <div id="modeDescription" class="mt-3">
+                    <div class="alert alert-info">
+                        <strong>View Mode:</strong> Scan bottles to view their current status and information.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- QR Scanner Section -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-camera"></i> QR Code Scanner</h5>
+                        <div class="btn-group float-end">
+                            <button class="btn btn-sm btn-success" id="startScanBtn">
+                                <i class="bi bi-play-fill"></i> Start Scanner
+                            </button>
+                            <button class="btn btn-sm btn-danger" id="stopScanBtn" style="display: none;">
+                                <i class="bi bi-stop-fill"></i> Stop Scanner
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="qr-reader" style="width: 100%; max-width: 400px; margin: 0 auto;"></div>
+                        
+                        <!-- Manual Input Alternative -->
+                        <div class="mt-3">
+                            <hr>
+                            <h6>Manual Entry:</h6>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="manualCodeInput" 
+                                       placeholder="Enter bottle code manually">
+                                <button class="btn btn-primary" id="manualScanBtn">
+                                    <i class="bi bi-search"></i> Scan
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-info-circle"></i> Scan Results</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="scanResults">
+                            <div class="text-center py-5">
+                                <i class="bi bi-qr-code-scan fs-1 text-muted"></i>
+                                <h5 class="text-muted mt-3">Ready to Scan</h5>
+                                <p class="text-muted">Scan a QR code or enter bottle code manually to begin</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Scans -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="bi bi-clock-history"></i> Recent Scans</h5>
+                <button class="btn btn-sm btn-outline-secondary float-end" onclick="clearRecentScans()">
+                    <i class="bi bi-trash"></i> Clear History
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="recentScans">
+                    <p class="text-muted">No recent scans</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transfer Modal -->
+    <div class="modal fade" id="transferModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Transfer Bottle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="transferForm">
+                        <!-- Form content will be populated dynamically -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmTransferBtn">Confirm Transfer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <%- include('../partials/footer') %>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let html5QrcodeScanner = null;
+        let currentScannerMode = 'view';
+        let recentScans = JSON.parse(localStorage.getItem('recentScans') || '[]');
+        let currentBottleData = null;
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            updateModeDescription();
+            displayRecentScans();
+            
+            // Mode change handlers
+            document.querySelectorAll('input[name="scannerMode"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    currentScannerMode = this.value;
+                    updateModeDescription();
+                });
+            });
+
+            // Scanner controls
+            document.getElementById('startScanBtn').addEventListener('click', startScanner);
+            document.getElementById('stopScanBtn').addEventListener('click', stopScanner);
+            document.getElementById('manualScanBtn').addEventListener('click', manualScan);
+            
+            // Enter key handler for manual input
+            document.getElementById('manualCodeInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    manualScan();
+                }
+            });
+        });
+
+        function updateModeDescription() {
+            const descriptions = {
+                view: 'View Mode: Scan bottles to view their current status and information.',
+                transfer: 'Transfer Mode: Scan bottles to transfer them between plant, vehicle, and customer.',
+                delivery: 'Delivery Mode: Scan bottles during delivery to mark them as delivered to customers.',
+                return: 'Return Mode: Scan refillable bottles to process returns back to plant.'
+            };
+            
+            const alertClasses = {
+                view: 'alert-info',
+                transfer: 'alert-warning', 
+                delivery: 'alert-success',
+                return: 'alert-primary'
+            };
+
+            document.getElementById('modeDescription').innerHTML = `
+                <div class="alert ${alertClasses[currentScannerMode]}">
+                    <strong>${currentScannerMode.charAt(0).toUpperCase() + currentScannerMode.slice(1)} Mode:</strong> 
+                    ${descriptions[currentScannerMode]}
+                </div>
+            `;
+        }
+
+        function startScanner() {
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            
+            html5QrcodeScanner = new Html5Qrcode("qr-reader");
+            
+            html5QrcodeScanner.start(
+                { facingMode: "environment" },
+                config,
+                onScanSuccess,
+                onScanFailure
+            ).catch(err => {
+                console.error('Scanner start failed:', err);
+                alert('Failed to start camera. Please check camera permissions.');
+            });
+
+            document.getElementById('startScanBtn').style.display = 'none';
+            document.getElementById('stopScanBtn').style.display = 'inline-block';
+        }
+
+        function stopScanner() {
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    html5QrcodeScanner.clear();
+                }).catch(err => {
+                    console.error('Scanner stop failed:', err);
+                });
+            }
+
+            document.getElementById('startScanBtn').style.display = 'inline-block';
+            document.getElementById('stopScanBtn').style.display = 'none';
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            try {
+                // Try to parse as JSON first (QR code data)
+                const qrData = JSON.parse(decodedText);
+                if (qrData.code) {
+                    processBottleScan(qrData.code, 'qr');
+                }
+            } catch (e) {
+                // If not JSON, treat as plain bottle code
+                processBottleScan(decodedText, 'qr');
+            }
+        }
+
+        function onScanFailure(error) {
+            // Scanner error handling (usually just noise)
+        }
+
+        function manualScan() {
+            const bottleCode = document.getElementById('manualCodeInput').value.trim();
+            if (bottleCode) {
+                processBottleScan(bottleCode, 'manual');
+                document.getElementById('manualCodeInput').value = '';
+            }
+        }
+
+        async function processBottleScan(bottleCode, scanMethod) {
+            try {
+                const response = await fetch(`/bottles/api/validate/${bottleCode}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    currentBottleData = data.bottle;
+                    addToRecentScans(bottleCode, data.bottle, scanMethod);
+                    
+                    switch (currentScannerMode) {
+                        case 'view':
+                            displayBottleInfo(data.bottle);
+                            break;
+                        case 'transfer':
+                            showTransferOptions(data.bottle);
+                            break;
+                        case 'delivery':
+                            processDelivery(data.bottle);
+                            break;
+                        case 'return':
+                            processReturn(data.bottle);
+                            break;
+                    }
+                } else {
+                    displayError('Bottle not found: ' + bottleCode);
+                }
+            } catch (error) {
+                console.error('Scan processing error:', error);
+                displayError('Error processing scan');
+            }
+        }
+
+        function displayBottleInfo(bottle) {
+            const html = `
+                <div class="card border-success">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0"><i class="bi bi-bottle"></i> Bottle Information</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Code:</strong> <code>${bottle.bottleCode}</code><br>
+                                <strong>Type:</strong> <span class="badge bg-info">${bottle.bottleType}</span><br>
+                                <strong>Status:</strong> <span class="badge bg-${getStatusColor(bottle.status)}">${bottle.status}</span><br>
+                                <strong>Refillable:</strong> ${bottle.isRefillable ? 
+                                    '<span class="badge bg-success">Yes</span>' : 
+                                    '<span class="badge bg-secondary">No</span>'
+                                }
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Manufacturing:</strong> ${new Date(bottle.manufacturingDate).toLocaleDateString()}<br>
+                                <strong>Expiry:</strong> ${new Date(bottle.expiryDate).toLocaleDateString()}<br>
+                                <strong>Batch:</strong> ${bottle.batchNumber || 'N/A'}<br>
+                                ${bottle.currentVehicleId ? `<strong>Vehicle ID:</strong> ${bottle.currentVehicleId}` : ''}
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <button class="btn btn-sm btn-outline-primary" onclick="viewBottleHistory('${bottle.bottleCode}')">
+                                <i class="bi bi-clock-history"></i> View History
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('scanResults').innerHTML = html;
+        }
+
+        function showTransferOptions(bottle) {
+            const transferOptions = getTransferOptions(bottle);
+            
+            if (transferOptions.length === 0) {
+                displayError(`No transfer options available for bottle in status: ${bottle.status}`);
+                return;
+            }
+
+            let formHtml = `
+                <div class="mb-3">
+                    <strong>Bottle:</strong> <code>${bottle.bottleCode}</code> (${bottle.bottleType})
+                    <br><strong>Current Status:</strong> <span class="badge bg-${getStatusColor(bottle.status)}">${bottle.status}</span>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Transfer To:</label>
+                    <select class="form-select" id="transferDestination" required>
+                        <option value="">Choose destination...</option>
+            `;
+
+            transferOptions.forEach(option => {
+                formHtml += `<option value="${option.value}">${option.label}</option>`;
+            });
+
+            formHtml += `
+                    </select>
+                </div>
+                <div id="additionalFields"></div>
+            `;
+
+            document.getElementById('transferForm').innerHTML = formHtml;
+            
+            // Show transfer modal
+            const modal = new bootstrap.Modal(document.getElementById('transferModal'));
+            modal.show();
+
+            // Handle destination change
+            document.getElementById('transferDestination').addEventListener('change', function() {
+                updateAdditionalFields(this.value, bottle);
+            });
+        }
+
+        function getTransferOptions(bottle) {
+            const options = [];
+            
+            switch (bottle.status) {
+                case 'AtPlant':
+                    options.push({ value: 'vehicle', label: 'Transfer to Vehicle' });
+                    break;
+                case 'AtVehicle':
+                    options.push({ value: 'customer', label: 'Deliver to Customer' });
+                    if (bottle.isRefillable) {
+                        options.push({ value: 'plant', label: 'Return to Plant' });
+                    }
+                    break;
+                case 'AtCustomer':
+                    if (bottle.isRefillable) {
+                        options.push({ value: 'plant', label: 'Return to Plant' });
+                    }
+                    break;
+            }
+            
+            return options;
+        }
+
+        async function updateAdditionalFields(destination, bottle) {
+            let fieldsHtml = '';
+            
+            if (destination === 'vehicle') {
+                // Load available vehicles
+                try {
+                    const response = await fetch('/vehicles/api/active');
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        fieldsHtml = `
+                            <div class="mb-3">
+                                <label class="form-label">Select Vehicle:</label>
+                                <select class="form-select" id="vehicleId" required>
+                                    <option value="">Choose vehicle...</option>
+                                    ${data.vehicles.map(v => 
+                                        `<option value="${v.id}">${v.license_plate} - ${v.vehicle_model}</option>`
+                                    ).join('')}
+                                </select>
+                            </div>
+                        `;
+                    }
+                } catch (error) {
+                    console.error('Error loading vehicles:', error);
+                }
+            }
+            
+            document.getElementById('additionalFields').innerHTML = fieldsHtml;
+        }
+
+        function processDelivery(bottle) {
+            if (bottle.status !== 'AtVehicle') {
+                displayError('Bottle must be on vehicle to be delivered');
+                return;
+            }
+
+            displayBottleInfo(bottle);
+            
+            const deliveryHtml = `
+                <div class="alert alert-success mt-3">
+                    <h6><i class="bi bi-check-circle"></i> Ready for Delivery</h6>
+                    <p>This bottle is loaded on a vehicle and ready for delivery.</p>
+                    <button class="btn btn-success" onclick="confirmDelivery('${bottle.bottleCode}')">
+                        <i class="bi bi-truck"></i> Mark as Delivered
+                    </button>
+                </div>
+            `;
+            
+            document.getElementById('scanResults').innerHTML += deliveryHtml;
+        }
+
+        function processReturn(bottle) {
+            if (!bottle.isRefillable) {
+                displayError('Only refillable bottles (5L, 20L) can be returned to plant');
+                return;
+            }
+
+            if (bottle.status === 'AtPlant') {
+                displayError('Bottle is already at plant');
+                return;
+            }
+
+            displayBottleInfo(bottle);
+            
+            const returnHtml = `
+                <div class="alert alert-primary mt-3">
+                    <h6><i class="bi bi-arrow-return-left"></i> Return Processing</h6>
+                    <p>This refillable bottle can be returned to plant for refilling.</p>
+                    <button class="btn btn-primary" onclick="confirmReturn('${bottle.bottleCode}')">
+                        <i class="bi bi-recycle"></i> Return to Plant
+                    </button>
+                </div>
+            `;
+            
+            document.getElementById('scanResults').innerHTML += returnHtml;
+        }
+
+        async function confirmDelivery(bottleCode) {
+            // This would integrate with your existing delivery confirmation system
+            alert('Delivery confirmation would integrate with the dispatch system');
+        }
+
+        async function confirmReturn(bottleCode) {
+            try {
+                const response = await fetch('/bottle-tracking/api/return-to-plant', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        bottleCode,
+                        scanMethod: 'qr'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displaySuccess('Bottle returned to plant successfully');
+                    // Refresh bottle info
+                    processBottleScan(bottleCode, 'qr');
+                } else {
+                    displayError('Error returning bottle: ' + data.message);
+                }
+            } catch (error) {
+                displayError('Error processing return');
+            }
+        }
+
+        function displayError(message) {
+            document.getElementById('scanResults').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i> ${message}
+                </div>
+            `;
+        }
+
+        function displaySuccess(message) {
+            document.getElementById('scanResults').innerHTML = `
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle"></i> ${message}
+                </div>
+            `;
+        }
+
+        function getStatusColor(status) {
+            const colors = {
+                'AtPlant': 'primary',
+                'AtVehicle': 'warning',
+                'AtCustomer': 'success'
+            };
+            return colors[status] || 'secondary';
+        }
+
+        function addToRecentScans(bottleCode, bottle, scanMethod) {
+            const scan = {
+                bottleCode,
+                bottleType: bottle.bottleType,
+                status: bottle.status,
+                scanMethod,
+                timestamp: new Date().toISOString(),
+                mode: currentScannerMode
+            };
+
+            recentScans.unshift(scan);
+            recentScans = recentScans.slice(0, 10); // Keep only last 10 scans
+            
+            localStorage.setItem('recentScans', JSON.stringify(recentScans));
+            displayRecentScans();
+        }
+
+        function displayRecentScans() {
+            const container = document.getElementById('recentScans');
+            
+            if (recentScans.length === 0) {
+                container.innerHTML = '<p class="text-muted">No recent scans</p>';
+                return;
+            }
+
+            const html = recentScans.map(scan => `
+                <div class="card mb-2">
+                    <div class="card-body p-2">
+                        <div class="row align-items-center">
+                            <div class="col-md-3">
+                                <code>${scan.bottleCode}</code>
+                            </div>
+                            <div class="col-md-2">
+                                <span class="badge bg-info">${scan.bottleType}</span>
+                            </div>
+                            <div class="col-md-2">
+                                <span class="badge bg-${getStatusColor(scan.status)}">${scan.status}</span>
+                            </div>
+                            <div class="col-md-2">
+                                <small>${scan.mode}</small>
+                            </div>
+                            <div class="col-md-3">
+                                <small class="text-muted">${new Date(scan.timestamp).toLocaleString()}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = html;
+        }
+
+        function clearRecentScans() {
+            recentScans = [];
+            localStorage.removeItem('recentScans');
+            displayRecentScans();
+        }
+
+        async function viewBottleHistory(bottleCode) {
+            try {
+                const response = await fetch(`/bottle-tracking/bottle/${bottleCode}/history`);
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(`Bottle ${bottleCode} has ${data.history.length} history entries`);
+                    // You can implement a detailed history modal here
+                } else {
+                    alert('Error loading bottle history');
+                }
+            } catch (error) {
+                alert('Error loading bottle history');
+            }
+        }
+    </script>
+
+    <style>
+        #qr-reader {
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .scan-mode-card {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .scan-mode-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .scan-mode-card.active {
+            border-color: #0d6efd;
+            background-color: #f8f9fa;
+        }
+    </style>
+</body>
+</html>

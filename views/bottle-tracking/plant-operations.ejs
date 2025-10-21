@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant Operations - Water Plant Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <%- include('../partials/header') %>
+        </div>
+    </div>
+
+    <div class="container mt-4">
+        <%- include('../partials/flash') %>
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="bi bi-factory"></i> Plant Operations</h2>
+            <div class="btn-group">
+                <a href="/bottle-tracking" class="btn btn-outline-primary">
+                    <i class="bi bi-qr-code-scan"></i> QR Scanner
+                </a>
+                <a href="/bottles" class="btn btn-outline-secondary">
+                    <i class="bi bi-bottle"></i> All Bottles
+                </a>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h5><i class="bi bi-truck-flatbed"></i> Load Bottles to Vehicle</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">Transfer bottles from plant to delivery vehicles</p>
+                        <button class="btn btn-primary" onclick="showLoadBottlesModal()">
+                            <i class="bi bi-plus-circle"></i> Load Bottles
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card border-success">
+                    <div class="card-header bg-success text-white">
+                        <h5><i class="bi bi-arrow-return-left"></i> Process Returns</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">Process returned refillable bottles for refilling</p>
+                        <button class="btn btn-success" onclick="showReturnBottlesModal()">
+                            <i class="bi bi-recycle"></i> Process Returns
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Plant Inventory -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="bi bi-boxes"></i> Plant Inventory</h5>
+                <div class="btn-group float-end">
+                    <button class="btn btn-sm btn-outline-primary" onclick="filterInventory('all')">All</button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="filterInventory('refillable')">Refillable Only</button>
+                    <button class="btn btn-sm btn-outline-warning" onclick="filterInventory('non-refillable')">Non-Refillable</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Bottle Code</th>
+                                <th>Type</th>
+                                <th>Refillable</th>
+                                <th>Manufacturing Date</th>
+                                <th>Batch</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="plantInventoryTable">
+                            <tr>
+                                <td colspan="6" class="text-center">
+                                    <div class="spinner-border" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Transfers -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-clock-history"></i> Recent Bottle Transfers</h5>
+            </div>
+            <div class="card-body">
+                <div id="recentTransfers">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Bottles Modal -->
+    <div class="modal fade" id="loadBottlesModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Load Bottles to Vehicle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="loadBottlesForm">
+                        <div class="mb-3">
+                            <label class="form-label">Select Vehicle</label>
+                            <select class="form-select" id="vehicleSelect" required>
+                                <option value="">Choose vehicle...</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Scan Method</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="scanMethod" id="qrMethod" value="qr" checked>
+                                <label class="btn btn-outline-primary" for="qrMethod">
+                                    <i class="bi bi-qr-code-scan"></i> QR Scanner
+                                </label>
+                                <input type="radio" class="btn-check" name="scanMethod" id="manualMethod" value="manual">
+                                <label class="btn btn-outline-secondary" for="manualMethod">
+                                    <i class="bi bi-keyboard"></i> Manual Entry
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Bottle Code</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="bottleCodeInput" 
+                                       placeholder="Scan QR code or enter bottle code manually" required>
+                                <button type="button" class="btn btn-primary" id="addBottleBtn">
+                                    <i class="bi bi-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="selectedBottles" class="mb-3">
+                            <h6>Selected Bottles:</h6>
+                            <div id="bottlesList" class="border rounded p-2 bg-light">
+                                <p class="text-muted m-0">No bottles selected yet</p>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="loadBottlesBtn" disabled>
+                        <i class="bi bi-truck-flatbed"></i> Load Bottles
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Return Bottles Modal -->
+    <div class="modal fade" id="returnBottlesModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Process Returned Bottles</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> Only refillable bottles (5L, 20L) can be returned to plant for refilling.
+                    </div>
+                    
+                    <form id="returnBottlesForm">
+                        <div class="mb-3">
+                            <label class="form-label">Scan Method</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="returnScanMethod" id="returnQrMethod" value="qr" checked>
+                                <label class="btn btn-outline-primary" for="returnQrMethod">
+                                    <i class="bi bi-qr-code-scan"></i> QR Scanner
+                                </label>
+                                <input type="radio" class="btn-check" name="returnScanMethod" id="returnManualMethod" value="manual">
+                                <label class="btn btn-outline-secondary" for="returnManualMethod">
+                                    <i class="bi bi-keyboard"></i> Manual Entry
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Bottle Code</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="returnBottleCodeInput" 
+                                       placeholder="Scan QR code or enter bottle code manually" required>
+                                <button type="button" class="btn btn-success" id="processReturnBtn">
+                                    <i class="bi bi-recycle"></i> Process Return
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="processedReturns" class="mb-3">
+                            <h6>Processed Returns:</h6>
+                            <div id="returnsList" class="border rounded p-2 bg-light">
+                                <p class="text-muted m-0">No returns processed yet</p>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <%- include('../partials/footer') %>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let selectedBottles = [];
+        let processedReturns = [];
+
+        // Load initial data
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPlantInventory();
+            loadVehicles();
+            loadRecentTransfers();
+        });
+
+        // Load plant inventory
+        async function loadPlantInventory(filter = 'all') {
+            try {
+                let url = '/bottle-tracking/api/plant-inventory';
+                if (filter === 'refillable') url += '?isRefillable=true';
+                if (filter === 'non-refillable') url += '?isRefillable=false';
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                const tbody = document.getElementById('plantInventoryTable');
+                
+                if (data.success && data.bottles.length > 0) {
+                    tbody.innerHTML = data.bottles.map(bottle => `
+                        <tr>
+                            <td><code>${bottle.bottleCode}</code></td>
+                            <td><span class="badge bg-info">${bottle.bottleType}</span></td>
+                            <td>
+                                ${bottle.isRefillable ? 
+                                    '<span class="badge bg-success">Yes</span>' : 
+                                    '<span class="badge bg-secondary">No</span>'
+                                }
+                            </td>
+                            <td>${new Date(bottle.manufacturingDate).toLocaleDateString()}</td>
+                            <td>${bottle.batchNumber || 'N/A'}</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="quickLoadBottle('${bottle.bottleCode}')">
+                                    <i class="bi bi-truck"></i> Load
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No bottles available in plant</td></tr>';
+                }
+            } catch (error) {
+                console.error('Error loading plant inventory:', error);
+            }
+        }
+
+        // Load vehicles
+        async function loadVehicles() {
+            try {
+                const response = await fetch('/vehicles/api/active');
+                const data = await response.json();
+
+                const select = document.getElementById('vehicleSelect');
+                select.innerHTML = '<option value="">Choose vehicle...</option>';
+                
+                if (data.success) {
+                    data.vehicles.forEach(vehicle => {
+                        select.innerHTML += `<option value="${vehicle.id}">${vehicle.license_plate} - ${vehicle.vehicle_model}</option>`;
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading vehicles:', error);
+            }
+        }
+
+        // Load recent transfers
+        async function loadRecentTransfers() {
+            try {
+                const response = await fetch('/bottle-tracking/api/recent-transfers');
+                const data = await response.json();
+
+                const container = document.getElementById('recentTransfers');
+                
+                if (data.success && data.transfers.length > 0) {
+                    container.innerHTML = data.transfers.map(transfer => `
+                        <div class="card mb-2">
+                            <div class="card-body p-2">
+                                <div class="row align-items-center">
+                                    <div class="col-md-3">
+                                        <strong><code>${transfer.bottle_code}</code></strong>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <i class="bi bi-arrow-right"></i> ${transfer.from_location} → ${transfer.to_location}
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted">${new Date(transfer.transferred_at).toLocaleString()}</small>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <span class="badge bg-${transfer.scan_method === 'qr' ? 'primary' : 'secondary'}">
+                                            ${transfer.scan_method.toUpperCase()}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p class="text-muted">No recent transfers</p>';
+                }
+            } catch (error) {
+                console.error('Error loading recent transfers:', error);
+            }
+        }
+
+        // Filter inventory
+        function filterInventory(filter) {
+            loadPlantInventory(filter);
+        }
+
+        // Show load bottles modal
+        function showLoadBottlesModal() {
+            const modal = new bootstrap.Modal(document.getElementById('loadBottlesModal'));
+            modal.show();
+        }
+
+        // Show return bottles modal
+        function showReturnBottlesModal() {
+            const modal = new bootstrap.Modal(document.getElementById('returnBottlesModal'));
+            modal.show();
+        }
+
+        // Add bottle to loading list
+        document.getElementById('addBottleBtn').addEventListener('click', async function() {
+            const bottleCode = document.getElementById('bottleCodeInput').value.trim();
+            if (!bottleCode) return;
+
+            if (selectedBottles.includes(bottleCode)) {
+                alert('Bottle already added to loading list');
+                return;
+            }
+
+            try {
+                // Validate bottle exists and is at plant
+                const response = await fetch(`/bottles/api/validate/${bottleCode}`);
+                const data = await response.json();
+
+                if (data.success && data.bottle.status === 'AtPlant') {
+                    selectedBottles.push(bottleCode);
+                    updateBottlesList();
+                    document.getElementById('bottleCodeInput').value = '';
+                    document.getElementById('loadBottlesBtn').disabled = selectedBottles.length === 0;
+                } else {
+                    alert(data.message || 'Bottle not available for loading');
+                }
+            } catch (error) {
+                alert('Error validating bottle');
+            }
+        });
+
+        // Update bottles list display
+        function updateBottlesList() {
+            const container = document.getElementById('bottlesList');
+            if (selectedBottles.length === 0) {
+                container.innerHTML = '<p class="text-muted m-0">No bottles selected yet</p>';
+            } else {
+                container.innerHTML = selectedBottles.map(code => `
+                    <span class="badge bg-primary me-2 mb-2">
+                        ${code}
+                        <button type="button" class="btn-close btn-close-white ms-1" onclick="removeBottle('${code}')"></button>
+                    </span>
+                `).join('');
+            }
+        }
+
+        // Remove bottle from loading list
+        function removeBottle(bottleCode) {
+            selectedBottles = selectedBottles.filter(code => code !== bottleCode);
+            updateBottlesList();
+            document.getElementById('loadBottlesBtn').disabled = selectedBottles.length === 0;
+        }
+
+        // Load bottles to vehicle
+        document.getElementById('loadBottlesBtn').addEventListener('click', async function() {
+            const vehicleId = document.getElementById('vehicleSelect').value;
+            const scanMethod = document.querySelector('input[name="scanMethod"]:checked').value;
+
+            if (!vehicleId || selectedBottles.length === 0) return;
+
+            this.disabled = true;
+            this.innerHTML = '<i class="spinner-border spinner-border-sm me-2"></i>Loading...';
+
+            try {
+                const response = await fetch('/bottle-tracking/api/load-to-vehicle', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        vehicleId,
+                        bottleCodes: selectedBottles,
+                        scanMethod
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Bottles loaded to vehicle successfully');
+                    selectedBottles = [];
+                    updateBottlesList();
+                    loadPlantInventory();
+                    loadRecentTransfers();
+                    bootstrap.Modal.getInstance(document.getElementById('loadBottlesModal')).hide();
+                } else {
+                    alert('Error loading bottles: ' + data.message);
+                }
+            } catch (error) {
+                alert('Error loading bottles to vehicle');
+            } finally {
+                this.disabled = false;
+                this.innerHTML = '<i class="bi bi-truck-flatbed"></i> Load Bottles';
+            }
+        });
+
+        // Process bottle return
+        document.getElementById('processReturnBtn').addEventListener('click', async function() {
+            const bottleCode = document.getElementById('returnBottleCodeInput').value.trim();
+            const scanMethod = document.querySelector('input[name="returnScanMethod"]:checked').value;
+
+            if (!bottleCode) return;
+
+            this.disabled = true;
+            this.innerHTML = '<i class="spinner-border spinner-border-sm me-2"></i>Processing...';
+
+            try {
+                const response = await fetch('/bottle-tracking/api/return-to-plant', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        bottleCode,
+                        scanMethod
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    processedReturns.push(bottleCode);
+                    updateReturnsList();
+                    document.getElementById('returnBottleCodeInput').value = '';
+                    loadPlantInventory();
+                    loadRecentTransfers();
+                } else {
+                    alert('Error processing return: ' + data.message);
+                }
+            } catch (error) {
+                alert('Error processing bottle return');
+            } finally {
+                this.disabled = false;
+                this.innerHTML = '<i class="bi bi-recycle"></i> Process Return';
+            }
+        });
+
+        // Update returns list display
+        function updateReturnsList() {
+            const container = document.getElementById('returnsList');
+            if (processedReturns.length === 0) {
+                container.innerHTML = '<p class="text-muted m-0">No returns processed yet</p>';
+            } else {
+                container.innerHTML = processedReturns.map(code => `
+                    <span class="badge bg-success me-2 mb-2">${code}</span>
+                `).join('');
+            }
+        }
+
+        // Quick load bottle
+        function quickLoadBottle(bottleCode) {
+            document.getElementById('bottleCodeInput').value = bottleCode;
+            showLoadBottlesModal();
+        }
+    </script>
+</body>
+</html>

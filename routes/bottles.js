@@ -387,4 +387,32 @@ router.get('/export', isAuthenticated, async (req, res) => {
     }
 });
 
+// Bottle validation API
+router.get('/api/validate/:bottleCode', isAuthenticated, async (req, res) => {
+    try {
+        const { bottleCode } = req.params;
+        
+        const bottle = await Bottle.findByCode(bottleCode);
+        
+        if (!bottle) {
+            return res.json({
+                success: false,
+                message: 'Bottle not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            bottle: bottle.toJSON(),
+            message: 'Bottle found'
+        });
+    } catch (error) {
+        console.error('Error validating bottle:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error validating bottle'
+        });
+    }
+});
+
 module.exports = router;

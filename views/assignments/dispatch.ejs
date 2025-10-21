@@ -190,10 +190,10 @@
                                                             title="Start Delivery">
                                                         <i class="fas fa-play"></i>
                                                     </button>
-                                                    <button class="btn btn-outline-primary btn-sm" 
-                                                            onclick="updateStatus('<%= assignment.id %>', 'delivered')"
+                                                    <button class="btn btn-outline-success btn-sm" 
+                                                            onclick="openBottleCodeModal('<%= assignment.id %>', '<%= assignment.quantity_per_delivery %>')"
                                                             title="Mark Delivered">
-                                                        <i class="fas fa-check"></i>
+                                                        <i class="fas fa-check"></i> Deliver
                                                     </button>
                                                     <button class="btn btn-outline-warning btn-sm" 
                                                             onclick="updateStatus('<%= assignment.id %>', 'failed')"
@@ -592,6 +592,222 @@
             const vehicleId = selectedOption.getAttribute('data-vehicle-id');
             document.getElementById('assign_vehicle_id').value = vehicleId || '';
         });
+
+        // Bottle Code Modal Functions
+        function openBottleCodeModal(assignmentId, bottleQuantity) {
+            document.getElementById('delivery_assignment_id').value = assignmentId;
+            document.getElementById('bottles_required').textContent = bottleQuantity;
+            document.getElementById('bottles_entered').textContent = '0';
+            
+            // Clear previous inputs
+            const container = document.getElementById('bottle_codes_container');
+            container.innerHTML = '';
+            
+            // Generate bottle code input fields
+            for (let i = 1; i <= bottleQuantity; i++) {
+                const div = document.createElement('div');
+                div.className = 'mb-3';
+                div.innerHTML = `
+                    <label for="bottle_code_${i}" class="form-label">Bottle Code ${i}</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-qrcode"></i></span>
+                        <input type="text" class="form-control bottle-code-input" 
+                               id="bottle_code_${i}" name="bottle_codes[]" 
+                               placeholder="Enter 6-digit bottle code" 
+                               maxlength="6" pattern="[0-9]{6}" required
+                               oninput="validateBottleCode(this, ${i})">
+                        <button class="btn btn-outline-secondary" type="button" 
+                                onclick="scanBottleCode(${i})" title="Scan QR Code">
+                            <i class="fas fa-camera"></i>
+                        </button>
+                    </div>
+                    <div class="invalid-feedback" id="bottle_error_${i}"></div>
+                `;
+                container.appendChild(div);
+            }
+            
+            // Show modal
+            new bootstrap.Modal(document.getElementById('bottleCodeModal')).show();
+        }
+
+        function validateBottleCode(input, index) {
+            const code = input.value;
+            const errorDiv = document.getElementById(`bottle_error_${index}`);
+            
+            // Remove non-numeric characters
+            input.value = code.replace(/\D/g, '');
+            
+            // Validate length
+            if (input.value.length === 6) {
+                input.classList.remove('is-invalid');
+                input.classList.add('is-valid');
+                errorDiv.textContent = '';
+            } else if (input.value.length > 0) {
+                input.classList.remove('is-valid');
+                input.classList.add('is-invalid');
+                errorDiv.textContent = 'Bottle code must be 6 digits long';
+            } else {
+                input.classList.remove('is-valid', 'is-invalid');
+                errorDiv.textContent = '';
+            }
+            
+            // Update counter
+            updateBottleCounter();
+        }
+
+        function updateBottleCounter() {
+            const inputs = document.querySelectorAll('.bottle-code-input');
+            const validInputs = Array.from(inputs).filter(input => 
+                input.value.length === 6 && input.classList.contains('is-valid')
+            );
+            document.getElementById('bottles_entered').textContent = validInputs.length;
+        }
+
+        function scanBottleCode(index) {
+            // Placeholder for QR code scanning functionality
+            // In a real implementation, this would open camera/scanner
+            alert(`QR Code scanner for bottle ${index} - Feature coming soon!`);
+        }
+
+        function processDelivery() {
+            const assignmentId = document.getElementById('delivery_assignment_id').value;
+            const bottleInputs = document.querySelectorAll('.bottle-code-input');
+            const deliveryNotes = document.getElementById('delivery_notes').value;
+            const validationAlert = document.getElementById('validation_alert');
+            const validationMessage = document.getElementById('validation_message');
+            
+            // Collect bottle codes
+            const bottleCodes = [];
+            let hasError = false;
+            
+            bottleInputs.forEach((input, index) => {
+                const code = input.value.trim();
+                if (code.length !== 6) {
+                    hasError = true;
+                    input.classList.add('is-invalid');
+                } else {
+                    bottleCodes.push(code);
+                }
+            });
+
+            if (hasError) {
+                validationMessage.textContent = 'Please enter all bottle codes (6 digits each)';
+                validationAlert.classList.remove('d-none');
+                return;
+            }
+
+            // Check for duplicate codes
+            const uniqueCodes = [...new Set(bottleCodes)];
+            if (uniqueCodes.length !== bottleCodes.length) {
+                validationMessage.textContent = 'Duplicate bottle codes are not allowed';
+                validationAlert.classList.remove('d-none');
+                return;
+            }
+
+            validationAlert.classList.add('d-none');
+            
+            // Disable button and show loading
+            const confirmBtn = document.getElementById('confirm_delivery_btn');
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+            // Send delivery request
+            fetch(`/assignments/${assignmentId}/deliver`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    bottle_codes: bottleCodes,
+                    notes: deliveryNotes
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal
+                    bootstrap.Modal.getInstance(document.getElementById('bottleCodeModal')).hide();
+                    
+                    // Show success message
+                    alert(`Delivery completed successfully with ${bottleCodes.length} bottles!`);
+                    
+                    // Reload page to update status
+                    location.reload();
+                } else {
+                    validationMessage.textContent = data.error || 'Failed to process delivery';
+                    validationAlert.classList.remove('d-none');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                validationMessage.textContent = 'Failed to process delivery: ' + error.message;
+                validationAlert.classList.remove('d-none');
+            })
+            .finally(() => {
+                // Re-enable button
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="fas fa-check"></i> Confirm Delivery';
+            });
+        }
     </script>
+
+    <!-- Bottle Code Input Modal -->
+    <div class="modal fade" id="bottleCodeModal" tabindex="-1" aria-labelledby="bottleCodeModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="bottleCodeModalLabel">
+                        <i class="fas fa-qrcode"></i> Confirm Delivery - Enter Bottle Codes
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> 
+                        <strong>Instructions:</strong> Please scan or enter the bottle codes for all bottles being delivered. 
+                        Each bottle code should be 6 digits long.
+                    </div>
+                    
+                    <form id="deliveryForm">
+                        <input type="hidden" id="delivery_assignment_id" name="assignment_id">
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label"><strong>Bottles Required:</strong></label>
+                                <span id="bottles_required" class="badge bg-primary fs-6">0</span>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label"><strong>Bottles Entered:</strong></label>
+                                <span id="bottles_entered" class="badge bg-secondary fs-6">0</span>
+                            </div>
+                        </div>
+
+                        <div id="bottle_codes_container">
+                            <!-- Bottle code inputs will be generated here -->
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="delivery_notes" class="form-label">Delivery Notes (Optional)</label>
+                            <textarea class="form-control" id="delivery_notes" name="delivery_notes" rows="3" 
+                                      placeholder="Any additional notes about the delivery..."></textarea>
+                        </div>
+
+                        <div class="alert alert-warning d-none" id="validation_alert">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span id="validation_message"></span>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="processDelivery()" id="confirm_delivery_btn">
+                        <i class="fas fa-check"></i> Confirm Delivery
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

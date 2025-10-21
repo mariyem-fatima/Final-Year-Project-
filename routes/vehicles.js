@@ -312,4 +312,24 @@ router.get('/api/check-license/:plate', auth, async (req, res) => {
     }
 });
 
+// API: Get all active vehicles
+router.get('/api/active', auth, async (req, res) => {
+    try {
+        const result = await Vehicle.findAll({ 
+            status: 'active'
+        }, 1, 100);
+        
+        res.json({
+            success: true,
+            vehicles: result.vehicles.map(v => v.toJSON())
+        });
+    } catch (error) {
+        console.error('Error getting active vehicles:', error);
+        res.status(500).json({ 
+            success: false,
+            error: 'Failed to get active vehicles' 
+        });
+    }
+});
+
 module.exports = router;

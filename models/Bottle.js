@@ -9,6 +9,8 @@ class Bottle {
         this.bottleType = bottleData.bottle_type;
         this.qrCodeData = bottleData.qr_code_data;
         this.status = bottleData.status;
+        this.isRefillable = bottleData.is_refillable;
+        this.currentVehicleId = bottleData.current_vehicle_id;
         this.description = bottleData.description;
         this.manufacturingDate = bottleData.manufacturing_date;
         this.expiryDate = bottleData.expiry_date;
@@ -61,6 +63,9 @@ class Bottle {
         try {
             const { bottleType, description, batchNumber, expiryDate } = bottleData;
             
+            // Determine if bottle is refillable (5L and 20L are refillable)
+            const isRefillable = bottleType === '5L' || bottleType === '20L';
+            
             // Generate unique bottle code
             let bottleCode;
             let isUnique = false;
@@ -82,12 +87,12 @@ class Bottle {
             const result = await pool.query(`
                 INSERT INTO bottles (
                     bottle_code, bottle_type, qr_code_data, description, 
-                    expiry_date, batch_number, created_by
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    expiry_date, batch_number, created_by, is_refillable
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 RETURNING *
             `, [
                 bottleCode, bottleType, qrCodeData, description,
-                calculatedExpiryDate, batchNumber, createdByUserId
+                calculatedExpiryDate, batchNumber, createdByUserId, isRefillable
             ]);
 
             const newBottle = new Bottle(result.rows[0]);
@@ -336,6 +341,198 @@ class Bottle {
         }
     }
 
+    // Transfer bottle from plant to vehicle
+    static async transferToVehicle(bottleCode, vehicleId, scannedBy, scanMethod = 'qr') {
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            // Get bottle details
+            const bottleResult = await client.query(
+                'SELECT * FROM bottles WHERE bottle_code = $1',
+                [bottleCode]
+            );
+            
+            if (bottleResult.rows.length === 0) {
+                throw new Error('Bottle not found');
+            }
+
+            const bottle = bottleResult.rows[0];
+            
+            if (bottle.status !== 'AtPlant') {
+                throw new Error(`Bottle is currently ${bottle.status}, cannot transfer from plant`);
+            }
+
+            // Update bottle status and vehicle
+            await client.query(
+                'UPDATE bottles SET status = $1, current_vehicle_id = $2, last_status_change = CURRENT_TIMESTAMP WHERE id = $3',
+                ['AtVehicle', vehicleId, bottle.id]
+            );
+
+            // Log transfer
+            await client.query(`
+                INSERT INTO bottle_transfers (
+                    bottle_id, from_location, to_location, to_vehicle_id, 
+                    scanned_by, scan_method, transfer_reason
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+            `, [
+                bottle.id, 'Plant', 'Vehicle', vehicleId, 
+                scannedBy, scanMethod, 'Plant to vehicle transfer'
+            ]);
+
+            // Log status change
+            await this.logStatusChange(bottle.id, 'AtPlant', 'AtVehicle', scannedBy, 'Transferred to vehicle');
+
+            await client.query('COMMIT');
+            return { success: true, message: 'Bottle transferred to vehicle successfully' };
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
+
+    // Transfer bottle from customer back to plant (for refillable bottles)
+    static async returnToPlant(bottleCode, scannedBy, scanMethod = 'qr', fromVehicleId = null) {
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            // Get bottle details
+            const bottleResult = await client.query(
+                'SELECT * FROM bottles WHERE bottle_code = $1',
+                [bottleCode]
+            );
+            
+            if (bottleResult.rows.length === 0) {
+                throw new Error('Bottle not found');
+            }
+
+            const bottle = bottleResult.rows[0];
+            
+            if (!bottle.is_refillable) {
+                throw new Error('Non-refillable bottles cannot be returned to plant');
+            }
+
+            if (bottle.status !== 'AtCustomer' && bottle.status !== 'AtVehicle') {
+                throw new Error(`Bottle is currently ${bottle.status}, cannot return to plant`);
+            }
+
+            const fromLocation = bottle.status === 'AtCustomer' ? 'Customer' : 'Vehicle';
+
+            // Update bottle status
+            await client.query(
+                'UPDATE bottles SET status = $1, current_vehicle_id = NULL, last_status_change = CURRENT_TIMESTAMP WHERE id = $2',
+                ['AtPlant', bottle.id]
+            );
+
+            // Log transfer
+            await client.query(`
+                INSERT INTO bottle_transfers (
+                    bottle_id, from_location, to_location, from_vehicle_id, 
+                    scanned_by, scan_method, transfer_reason
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+            `, [
+                bottle.id, fromLocation, 'Plant', fromVehicleId, 
+                scannedBy, scanMethod, 'Returned to plant for refill'
+            ]);
+
+            // Log status change
+            await this.logStatusChange(bottle.id, bottle.status, 'AtPlant', scannedBy, 'Returned to plant for refill');
+
+            await client.query('COMMIT');
+            return { success: true, message: 'Bottle returned to plant successfully' };
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
+
+    // Get vehicle inventory
+    static async getVehicleInventory(vehicleId) {
+        try {
+            const result = await pool.query(`
+                SELECT b.*, bt.transferred_at as loaded_at
+                FROM bottles b
+                LEFT JOIN bottle_transfers bt ON b.id = bt.bottle_id 
+                    AND bt.to_vehicle_id = $1 
+                    AND bt.to_location = 'Vehicle'
+                WHERE b.current_vehicle_id = $1 AND b.status = 'AtVehicle'
+                ORDER BY bt.transferred_at DESC
+            `, [vehicleId]);
+
+            return result.rows.map(row => new Bottle(row));
+        } catch (error) {
+            console.error('Error getting vehicle inventory:', error);
+            throw error;
+        }
+    }
+
+    // Get bottles at plant (available for loading)
+    static async getPlantInventory(filter = {}) {
+        try {
+            let query = `
+                SELECT b.*, u.email as created_by_email 
+                FROM bottles b
+                LEFT JOIN users u ON b.created_by = u.id
+                WHERE b.status = 'AtPlant'
+            `;
+            
+            const params = [];
+            let paramCount = 1;
+
+            if (filter.bottleType) {
+                query += ` AND b.bottle_type = $${paramCount++}`;
+                params.push(filter.bottleType);
+            }
+
+            if (filter.isRefillable !== undefined) {
+                query += ` AND b.is_refillable = $${paramCount++}`;
+                params.push(filter.isRefillable);
+            }
+
+            query += ' ORDER BY b.created_at DESC';
+
+            const result = await pool.query(query, params);
+            return result.rows.map(row => new Bottle(row));
+        } catch (error) {
+            console.error('Error getting plant inventory:', error);
+            throw error;
+        }
+    }
+
+    // Get bottle transfer history
+    static async getTransferHistory(bottleCode) {
+        try {
+            const result = await pool.query(`
+                SELECT 
+                    bt.*,
+                    b.bottle_code,
+                    b.bottle_type,
+                    u.email as scanned_by_email,
+                    v1.license_plate as from_vehicle_plate,
+                    v2.license_plate as to_vehicle_plate,
+                    c.full_name as customer_name
+                FROM bottle_transfers bt
+                JOIN bottles b ON bt.bottle_id = b.id
+                LEFT JOIN users u ON bt.scanned_by = u.id
+                LEFT JOIN vehicles v1 ON bt.from_vehicle_id = v1.id
+                LEFT JOIN vehicles v2 ON bt.to_vehicle_id = v2.id
+                LEFT JOIN customers c ON bt.customer_id = c.id
+                WHERE b.bottle_code = $1
+                ORDER BY bt.transferred_at DESC
+            `, [bottleCode]);
+
+            return result.rows;
+        } catch (error) {
+            console.error('Error getting transfer history:', error);
+            throw error;
+        }
+    }
+
     // Convert to JSON with formatted dates
     toJSON() {
         return {
@@ -344,6 +541,8 @@ class Bottle {
             bottleType: this.bottleType,
             qrCodeData: this.qrCodeData,
             status: this.status,
+            isRefillable: this.isRefillable,
+            currentVehicleId: this.currentVehicleId,
             description: this.description,
             manufacturingDate: moment(this.manufacturingDate).format('YYYY-MM-DD'),
             expiryDate: moment(this.expiryDate).format('YYYY-MM-DD'),
