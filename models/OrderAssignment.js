@@ -50,7 +50,7 @@ class OrderAssignment {
                 WHERE oa.id = $1
             `;
 
-            const result = await pool.query(query, [assignmentId]);
+            const result = await pool.query(query, [parseInt(assignmentId)]);
             
             if (result.rows.length === 0) {
                 return null;
@@ -312,20 +312,27 @@ class OrderAssignment {
             // Update assignment status
             const assignmentQuery = `
                 UPDATE order_assignments 
-                SET delivery_status = $1,
-                    notes = COALESCE($2, notes),
+                SET delivery_status = $1::varchar,
+                    notes = CASE 
+                        WHEN $2::text IS NOT NULL THEN $2::text 
+                        ELSE notes 
+                    END,
                     actual_delivery_time = CASE 
-                        WHEN $1 = 'completed' THEN CURRENT_TIME 
+                        WHEN $1 IN ('delivered', 'completed') THEN CURRENT_TIME 
                         WHEN $1 = 'in_progress' THEN COALESCE(actual_delivery_time, CURRENT_TIME)
                         ELSE actual_delivery_time 
                     END,
                     updated_at = CURRENT_TIMESTAMP
-                WHERE id = $3
+                WHERE id = $3::integer
                 RETURNING *
             `;
             
             const finalNotes = delivery_notes || failure_reason || notes || null;
-            const assignmentResult = await client.query(assignmentQuery, [newStatus, finalNotes, assignmentId]);
+            const assignmentResult = await client.query(assignmentQuery, [
+                newStatus, 
+                finalNotes, 
+                parseInt(assignmentId)
+            ]);
             
             if (assignmentResult.rows.length === 0) {
                 await client.query('ROLLBACK');
@@ -335,7 +342,7 @@ class OrderAssignment {
             const assignment = assignmentResult.rows[0];
             
             // If delivery is completed, update bottles and order status
-            if (newStatus === 'completed' && delivered_bottles) {
+            if (['delivered', 'completed'].includes(newStatus) && delivered_bottles) {
                 // Update bottles status to delivered (handled by bottle tracking)
                 // Update order status
                 const orderUpdateQuery = `
@@ -538,9 +545,13 @@ class OrderAssignment {
 
                 const bottle = bottleResult.rows[0];
 
-                if (bottle.status !== 'AtPlant') {
-                    throw new Error(`Bottle ${bottleCode} is not available (current status: ${bottle.status})`);
+                // Allow delivery from both 'AtPlant' and 'AtVehicle' status
+                if (!['AtPlant', 'AtVehicle'].includes(bottle.status)) {
+                    throw new Error(`Bottle ${bottleCode} is not available for delivery (current status: ${bottle.status})`);
                 }
+
+                // Store previous status for history logging
+                const previousStatus = bottle.status;
 
                 // Update bottle status to 'AtCustomer'
                 await client.query(
@@ -548,11 +559,11 @@ class OrderAssignment {
                     ['AtCustomer', bottle.id]
                 );
 
-                // Log bottle status change
+                // Log bottle status change with actual previous status
                 await client.query(`
                     INSERT INTO bottle_history (bottle_id, previous_status, new_status, changed_by, change_reason)
                     VALUES ($1, $2, $3, $4, $5)
-                `, [bottle.id, 'AtPlant', 'AtCustomer', userId, `Delivered to customer via assignment ${assignmentId}`]);
+                `, [bottle.id, previousStatus, 'AtCustomer', userId, `Delivered to customer via assignment ${assignmentId}`]);
 
                 // Record bottle delivery
                 await client.query(`

@@ -70,27 +70,54 @@ router.get('/dashboard', isAuthenticated, canDeliverOrders, async (req, res) => 
 router.get('/order/:id', isAuthenticated, canDeliverOrders, async (req, res) => {
     try {
         const orderId = req.params.id;
+        console.log('🔍 Driver trying to view order:', orderId);
+        console.log('🔍 User:', req.user.email, 'Role:', req.user.role);
         
         // Get order assignment details
         const assignment = await OrderAssignment.findById(orderId);
+        console.log('🔍 Found assignment:', assignment ? 'YES' : 'NO');
+        
         if (!assignment) {
+            console.log('❌ Order assignment not found for ID:', orderId);
             req.flash('error', 'Order not found');
             return res.redirect('/driver/dashboard');
         }
 
+        console.log('🔍 Assignment details:', {
+            id: assignment.id,
+            driver_id: assignment.driver_id,
+            customer_name: assignment.customer_name
+        });
+
         // Check if driver is authorized to view this order
-        if (req.user.role === 'driver' && assignment.driver_id !== req.user.id) {
-            req.flash('error', 'You are not authorized to view this order');
-            return res.redirect('/driver/dashboard');
+        if (req.user.role === 'driver') {
+            // First, find the driver record by user_id
+            const driver = await Driver.findByUserId(req.user.id);
+            console.log('🔍 Driver found:', driver ? `ID: ${driver.id}` : 'NO');
+            
+            if (!driver) {
+                console.log('❌ Driver profile not found for user:', req.user.id);
+                req.flash('error', 'Driver profile not found');
+                return res.redirect('/driver/dashboard');
+            }
+            
+            console.log('🔍 Authorization check: assignment.driver_id =', assignment.driver_id, 'vs driver.id =', driver.id);
+            
+            if (assignment.driver_id !== driver.id) {
+                console.log('❌ Authorization failed');
+                req.flash('error', 'You are not authorized to view this order');
+                return res.redirect('/driver/dashboard');
+            }
         }
 
+        console.log('✅ Rendering order detail page');
         res.render('driver/order-detail', {
             title: 'Order Details',
             user: req.user,
             assignment: assignment
         });
     } catch (error) {
-        console.error('Error loading order details:', error);
+        console.error('❌ Error loading order details:', error);
         req.flash('error', 'Error loading order details');
         res.redirect('/driver/dashboard');
     }
@@ -159,20 +186,46 @@ router.get('/order/:id/validate-bottle/:bottleCode', isAuthenticated, canDeliver
 router.post('/order/:id/delivered', isAuthenticated, canDeliverOrders, async (req, res) => {
     try {
         const assignmentId = req.params.id;
-        const { notes, delivered_bottles } = req.body;
+        const { bottle_codes, notes } = req.body;
 
-        // Update assignment status to delivered
-        await OrderAssignment.updateStatus(assignmentId, 'delivered', {
-            notes: notes || '',
-            delivery_notes: notes || '',
-            delivered_bottles: delivered_bottles || 0,
-            completed_at: new Date()
+        console.log('🚚 Processing delivery for assignment:', assignmentId);
+        console.log('🍼 Bottle codes received:', bottle_codes);
+        console.log('📝 Notes:', notes);
+
+        // Validate bottle codes if provided
+        if (!bottle_codes || !Array.isArray(bottle_codes) || bottle_codes.length === 0) {
+            return res.json({ 
+                success: false, 
+                error: 'At least one bottle code is required' 
+            });
+        }
+
+        // Validate each bottle code format
+        for (const code of bottle_codes) {
+            if (!code || code.length !== 6 || !/^\d{6}$/.test(code)) {
+                return res.json({ 
+                    success: false, 
+                    error: `Invalid bottle code: ${code}. Must be 6 digits.` 
+                });
+            }
+        }
+
+        // Use the proper method that handles bottle status updates
+        await OrderAssignment.markDeliveredWithBottles(
+            parseInt(assignmentId), 
+            bottle_codes, 
+            req.user.id, 
+            notes || ''
+        );
+
+        console.log('✅ Delivery processed successfully with bottle updates');
+        res.json({ 
+            success: true, 
+            message: `Delivery completed with ${bottle_codes.length} bottles` 
         });
-
-        res.json({ success: true, message: 'Delivery marked as completed' });
     } catch (error) {
-        console.error('Error marking delivery as delivered:', error);
-        res.json({ success: false, message: 'Error updating delivery status' });
+        console.error('❌ Error processing delivery:', error);
+        res.json({ success: false, error: error.message || 'Failed to process delivery' });
     }
 });
 
@@ -182,16 +235,27 @@ router.post('/order/:id/failed', isAuthenticated, canDeliverOrders, async (req, 
         const assignmentId = req.params.id;
         const { failure_reason } = req.body;
 
+        console.log('❌ Processing failed delivery for assignment:', assignmentId);
+        console.log('📝 Failure reason:', failure_reason);
+
+        if (!failure_reason || !failure_reason.trim()) {
+            return res.json({ 
+                success: false, 
+                error: 'Failure reason is required' 
+            });
+        }
+
         // Update assignment status to failed
         await OrderAssignment.updateStatus(assignmentId, 'failed', {
-            failure_reason: failure_reason,
+            failure_reason: failure_reason.trim(),
             failed_at: new Date()
         });
 
+        console.log('✅ Failed delivery processed successfully');
         res.json({ success: true, message: 'Delivery marked as failed' });
     } catch (error) {
-        console.error('Error marking delivery as failed:', error);
-        res.json({ success: false, message: 'Error updating delivery status' });
+        console.error('❌ Error marking delivery as failed:', error);
+        res.json({ success: false, error: 'Failed to update delivery status' });
     }
 });
 
