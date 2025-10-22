@@ -3,6 +3,7 @@ const { pool } = require('./database');
 class Driver {
     constructor(data = {}) {
         this.id = data.id;
+        this.user_id = data.user_id; // Link to users table
         this.full_name = data.full_name;
         this.cnic = data.cnic;
         this.phone_primary = data.phone_primary;
@@ -36,6 +37,7 @@ class Driver {
     static async create(driverData, userId) {
         try {
             const {
+                user_id,  // Add user_id for linking to users table
                 full_name,
                 cnic,
                 phone_primary,
@@ -58,16 +60,16 @@ class Driver {
 
             const query = `
                 INSERT INTO drivers (
-                    full_name, cnic, phone_primary, phone_secondary, email,
+                    user_id, full_name, cnic, phone_primary, phone_secondary, email,
                     license_number, license_type, license_expiry, address, city,
                     emergency_contact_name, emergency_contact_phone, assigned_vehicle_id,
                     status, hire_date, salary, experience_years, notes, created_by
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
                 RETURNING *
             `;
 
             const values = [
-                full_name, cnic, phone_primary, phone_secondary, email,
+                user_id, full_name, cnic, phone_primary, phone_secondary, email,
                 license_number, license_type, license_expiry, address, city,
                 emergency_contact_name, emergency_contact_phone, assigned_vehicle_id,
                 status, hire_date, salary, experience_years, notes, userId
@@ -102,6 +104,34 @@ class Driver {
             `;
             
             const result = await pool.query(query, [id]);
+            return result.rows.length > 0 ? new Driver(result.rows[0]) : null;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    // Get driver by user ID (for authentication integration)
+    static async findByUserId(userId) {
+        try {
+            const query = `
+                SELECT d.*, 
+                       v.license_plate as vehicle_license_plate,
+                       v.vehicle_type,
+                       u.email as created_by_email,
+                       COALESCE(orders_today.total_orders, 0) as total_orders_today
+                FROM drivers d
+                LEFT JOIN vehicles v ON d.assigned_vehicle_id = v.id
+                LEFT JOIN users u ON d.created_by = u.id
+                LEFT JOIN (
+                    SELECT driver_id, COUNT(*) as total_orders
+                    FROM order_assignments oa
+                    WHERE DATE(oa.assigned_date) = CURRENT_DATE
+                    GROUP BY driver_id
+                ) orders_today ON d.id = orders_today.driver_id
+                WHERE d.user_id = $1
+            `;
+            
+            const result = await pool.query(query, [userId]);
             return result.rows.length > 0 ? new Driver(result.rows[0]) : null;
         } catch (error) {
             throw error;
@@ -188,7 +218,7 @@ class Driver {
     static async update(id, updateData) {
         try {
             const allowedFields = [
-                'full_name', 'cnic', 'phone_primary', 'phone_secondary', 'email',
+                'user_id', 'full_name', 'cnic', 'phone_primary', 'phone_secondary', 'email',
                 'license_number', 'license_type', 'license_expiry', 'address', 'city',
                 'emergency_contact_name', 'emergency_contact_phone', 'assigned_vehicle_id',
                 'status', 'hire_date', 'salary', 'experience_years', 'notes'
@@ -456,12 +486,12 @@ class Driver {
                 SELECT 
                     oa.assigned_date as date,
                     COUNT(oa.order_id) as order_count,
-                    oa.status,
+                    oa.delivery_status as status,
                     v.license_plate || ' - ' || v.vehicle_type as vehicle_info
                 FROM order_assignments oa
                 LEFT JOIN vehicles v ON oa.vehicle_id = v.id
                 WHERE oa.driver_id = $1
-                GROUP BY oa.assigned_date, oa.status, v.license_plate, v.vehicle_type
+                GROUP BY oa.assigned_date, oa.delivery_status, v.license_plate, v.vehicle_type
                 ORDER BY oa.assigned_date DESC
                 LIMIT $2
             `;

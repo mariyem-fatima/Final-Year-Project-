@@ -17,6 +17,7 @@ const customerRoutes = require('./routes/customers');
 const orderRoutes = require('./routes/orders');
 const vehicleRoutes = require('./routes/vehicles');
 const driverRoutes = require('./routes/drivers');
+const driverAppRoutes = require('./routes/driver');
 
 // Middleware
 app.use(express.json());
@@ -65,6 +66,7 @@ app.use('/orders', orderRoutes);
 app.use('/assignments', assignmentRoutes);
 app.use('/vehicles', vehicleRoutes);
 app.use('/drivers', driverRoutes);
+app.use('/driver', driverAppRoutes);
 
 // Root route - redirect to login
 app.get('/', (req, res) => {

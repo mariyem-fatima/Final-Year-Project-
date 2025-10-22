@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Vehicle = require('../models/Vehicle');
-const { isAuthenticated: auth } = require('../middleware/auth');
+const { isAuthenticated: auth, canManageVehicles } = require('../middleware/auth');
 
 // Vehicles listing page
 router.get('/', auth, async (req, res) => {
@@ -32,7 +32,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // Add vehicle page
-router.get('/add', auth, async (req, res) => {
+router.get('/add', auth, canManageVehicles, async (req, res) => {
     try {
         res.render('vehicles/add-vehicle', {
             title: 'Add New Vehicle',
@@ -45,8 +45,8 @@ router.get('/add', auth, async (req, res) => {
     }
 });
 
-// Create new vehicle
-router.post('/add', auth, async (req, res) => {
+// Handle adding new vehicle
+router.post('/add', auth, canManageVehicles, async (req, res) => {
     try {
         const {
             license_plate,
@@ -124,7 +124,7 @@ router.get('/:id', auth, async (req, res) => {
 });
 
 // Edit vehicle page
-router.get('/:id/edit', auth, async (req, res) => {
+router.get('/:id/edit', auth, canManageVehicles, async (req, res) => {
     try {
         const vehicle = await Vehicle.findById(req.params.id);
         
@@ -146,7 +146,7 @@ router.get('/:id/edit', auth, async (req, res) => {
 });
 
 // Update vehicle
-router.post('/:id/edit', auth, async (req, res) => {
+router.post('/:id/edit', auth, canManageVehicles, async (req, res) => {
     try {
         const vehicleId = req.params.id;
         const {

@@ -2,6 +2,9 @@ const { pool } = require('./database');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 
+// Valid user roles
+const VALID_ROLES = ['admin', 'staff', 'driver', 'user'];
+
 class User {
     constructor(userData) {
         this.id = userData.id;
@@ -48,6 +51,11 @@ class User {
     static async create(userData) {
         try {
             const { email, password, pin, fingerprintData, role = 'user' } = userData;
+            
+            // Validate role
+            if (!VALID_ROLES.includes(role)) {
+                throw new Error(`Invalid role: ${role}. Must be one of: ${VALID_ROLES.join(', ')}`);
+            }
             
             // Hash password
             const passwordHash = await bcrypt.hash(password, 12);
@@ -125,6 +133,25 @@ class User {
             return result.rows;
         } catch (error) {
             console.error('Error getting all users:', error);
+            throw error;
+        }
+    }
+
+    // Get users available for driver linking (only driver role users without existing driver profiles)
+    static async getAvailableForDriverLink() {
+        try {
+            const result = await pool.query(`
+                SELECT u.id, u.email, u.role 
+                FROM users u
+                LEFT JOIN drivers d ON u.id = d.user_id
+                WHERE u.is_active = true 
+                AND u.role = 'driver'
+                AND d.user_id IS NULL
+                ORDER BY u.email ASC
+            `);
+            return result.rows;
+        } catch (error) {
+            console.error('Error getting available users for driver link:', error);
             throw error;
         }
     }
@@ -216,11 +243,46 @@ class User {
             role: this.role,
             isActive: this.isActive,
             createdAt: this.createdAt,
-            lastLogin: this.lastLogin,
-            hasFingerprint: !!this.fingerprintData,
-            hasPin: !!this.pinHash
+            lastLogin: this.lastLogin
         };
     }
+
+    // Static method to get valid roles
+    static getValidRoles() {
+        return VALID_ROLES;
+    }
+
+    // Role checking methods
+    isAdmin() {
+        return this.role === 'admin';
+    }
+
+    isStaff() {
+        return this.role === 'staff';
+    }
+
+    isDriver() {
+        return this.role === 'driver';
+    }
+
+    // Permission checking methods
+    canManageUsers() {
+        return this.role === 'admin';
+    }
+
+    canManageVehicles() {
+        return this.role === 'admin';
+    }
+
+    canAccessAllModules() {
+        return this.role === 'admin' || this.role === 'staff';
+    }
+
+    canDeliverOrders() {
+        return this.role === 'driver' || this.role === 'admin' || this.role === 'staff';
+    }
 }
+
+module.exports = User;
 
 module.exports = User;

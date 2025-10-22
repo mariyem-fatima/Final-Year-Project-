@@ -68,6 +68,21 @@
                                     </div>
 
                                     <div class="mb-3">
+                                        <label for="user_id" class="form-label">Link to User Account</label>
+                                        <select class="form-select" id="user_id" name="user_id">
+                                            <option value="">Select a user account (optional)</option>
+                                            <% if (typeof users !== 'undefined' && users) { %>
+                                                <% users.forEach(user => { %>
+                                                    <option value="<%= user.id %>">
+                                                        <%= user.email %> (<%= user.role %>)
+                                                    </option>
+                                                <% }); %>
+                                            <% } %>
+                                        </select>
+                                        <div class="form-text">Link this driver to a user account for login access. Only driver and admin users are shown.</div>
+                                    </div>
+
+                                    <div class="mb-3">
                                         <label for="address" class="form-label">Address <span class="text-danger">*</span></label>
                                         <textarea class="form-control" id="address" name="address" rows="3" required 
                                                   placeholder="Enter complete address" maxlength="255"></textarea>

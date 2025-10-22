@@ -11,116 +11,133 @@
             
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/dashboard">
-                            <i class="fas fa-home"></i> Home
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/bottles">
-                            <i class="fas fa-wine-bottle"></i> Bottles
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/customers">
-                            <i class="fas fa-address-book"></i> Customers
-                        </a>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="ordersDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-shopping-cart"></i> Orders
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="/orders">
-                                <i class="fas fa-list"></i> All Orders
-                            </a></li>
-                            <li><a class="dropdown-item" href="/orders/add">
-                                <i class="fas fa-plus-circle"></i> New Order
-                            </a></li>
-                            <li><a class="dropdown-item" href="/orders/schedule/delivery">
-                                <i class="fas fa-calendar-check"></i> Delivery Schedule
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="/assignments/dispatch">
-                                <i class="fas fa-clipboard-list"></i> Daily Dispatch
-                            </a></li>
-                            <li><a class="dropdown-item" href="/orders/api/due-today" onclick="showTodaysDeliveries(event)">
-                                <i class="fas fa-truck"></i> Today's Deliveries
-                            </a></li>
-                        </ul>
-                    </li>
-
-                    <!-- Bottle Tracking Dropdown -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="bottleTrackingDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-qrcode"></i> Bottle Tracking
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="/bottle-tracking">
-                                <i class="fas fa-qrcode"></i> QR Scanner
-                            </a></li>
-                            <li><a class="dropdown-item" href="/bottle-tracking/plant-operations">
-                                <i class="fas fa-factory"></i> Plant Operations
-                            </a></li>
-                            <li><a class="dropdown-item" href="/bottle-tracking/deliveries">
-                                <i class="fas fa-truck"></i> Delivery Tracking
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="/assignments/dispatch">
-                                <i class="fas fa-clipboard-list"></i> Dispatch Center
-                            </a></li>
-                        </ul>
-                    </li>
-
-                    <!-- Vehicles Dropdown -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="vehiclesDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-truck"></i> Vehicles
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="/vehicles">
-                                <i class="fas fa-list"></i> All Vehicles
-                            </a></li>
-                            <li><a class="dropdown-item" href="/vehicles/add">
-                                <i class="fas fa-plus-circle"></i> Add Vehicle
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="/vehicles/api/maintenance-alerts" onclick="showMaintenanceAlerts(event)">
-                                <i class="fas fa-wrench"></i> Maintenance Alerts
-                            </a></li>
-                        </ul>
-                    </li>
-
-                    <!-- Drivers Dropdown -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="driversDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-id-card"></i> Drivers
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="/drivers">
-                                <i class="fas fa-list"></i> All Drivers
-                            </a></li>
-                            <li><a class="dropdown-item" href="/drivers/add">
-                                <i class="fas fa-plus-circle"></i> Add Driver
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="/drivers/api/license-alerts" onclick="showLicenseAlerts(event)">
-                                <i class="fas fa-exclamation-triangle"></i> License Alerts
-                            </a></li>
-                        </ul>
-                    </li>
-
-                    <% if (user.role === 'admin') { %>
+                    <!-- Driver Navigation (Simple) -->
+                    <% if (user.role === 'driver') { %>
                         <li class="nav-item">
-                            <a class="nav-link" href="/dashboard/users">
-                                <i class="fas fa-users-cog"></i> Users
+                            <a class="nav-link" href="/driver/dashboard">
+                                <i class="fas fa-truck"></i> My Deliveries
+                            </a>
+                        </li>
+                    <% } else { %>
+                        <!-- Admin and Staff Navigation -->
+                        <li class="nav-item">
+                            <a class="nav-link" href="/dashboard">
+                                <i class="fas fa-home"></i> Home
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="/dashboard/users/add">
-                                <i class="fas fa-user-plus"></i> Add User
+                            <a class="nav-link" href="/bottles">
+                                <i class="fas fa-wine-bottle"></i> Bottles
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/customers">
+                                <i class="fas fa-address-book"></i> Customers
+                            </a>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="ordersDropdown" role="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-shopping-cart"></i> Orders
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="/orders">
+                                    <i class="fas fa-list"></i> All Orders
+                                </a></li>
+                                <% if (user.role === 'admin') { %>
+                                    <li><a class="dropdown-item" href="/orders/add">
+                                        <i class="fas fa-plus-circle"></i> New Order
+                                    </a></li>
+                                <% } %>
+                                <li><a class="dropdown-item" href="/orders/schedule/delivery">
+                                    <i class="fas fa-calendar-check"></i> Delivery Schedule
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="/assignments/dispatch">
+                                    <i class="fas fa-clipboard-list"></i> Daily Dispatch
+                                </a></li>
+                                <li><a class="dropdown-item" href="/orders/api/due-today" onclick="showTodaysDeliveries(event)">
+                                    <i class="fas fa-truck"></i> Today's Deliveries
+                                </a></li>
+                            </ul>
+                        </li>
+
+                        <!-- Bottle Tracking Dropdown -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="bottleTrackingDropdown" role="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-qrcode"></i> Bottle Tracking
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="/bottle-tracking">
+                                    <i class="fas fa-qrcode"></i> QR Scanner
+                                </a></li>
+                                <li><a class="dropdown-item" href="/bottle-tracking/plant-operations">
+                                    <i class="fas fa-factory"></i> Plant Operations
+                                </a></li>
+                                <li><a class="dropdown-item" href="/bottle-tracking/deliveries">
+                                    <i class="fas fa-truck"></i> Delivery Tracking
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="/assignments/dispatch">
+                                    <i class="fas fa-clipboard-list"></i> Dispatch Center
+                                </a></li>
+                            </ul>
+                        </li>
+
+                        <!-- Vehicles Dropdown (View only for staff) -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="vehiclesDropdown" role="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-truck"></i> Vehicles
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="/vehicles">
+                                    <i class="fas fa-list"></i> All Vehicles
+                                </a></li>
+                                <% if (user.role === 'admin') { %>
+                                    <li><a class="dropdown-item" href="/vehicles/add">
+                                        <i class="fas fa-plus-circle"></i> Add Vehicle
+                                    </a></li>
+                                <% } %>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="/vehicles/api/maintenance-alerts" onclick="showMaintenanceAlerts(event)">
+                                    <i class="fas fa-wrench"></i> Maintenance Alerts
+                                </a></li>
+                            </ul>
+                        </li>
+
+                        <!-- Drivers Dropdown (View only for staff) -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="driversDropdown" role="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-id-card"></i> Drivers
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="/drivers">
+                                    <i class="fas fa-list"></i> All Drivers
+                                </a></li>
+                                <% if (user.role === 'admin') { %>
+                                    <li><a class="dropdown-item" href="/drivers/add">
+                                        <i class="fas fa-plus-circle"></i> Add Driver
+                                    </a></li>
+                                <% } %>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="/drivers/api/license-alerts" onclick="showLicenseAlerts(event)">
+                                    <i class="fas fa-exclamation-triangle"></i> License Alerts
+                                </a></li>
+                            </ul>
+                        </li>
+
+                        <!-- Admin-only sections -->
+                        <% if (user.role === 'admin') { %>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/dashboard/users">
+                                    <i class="fas fa-users-cog"></i> Users
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/dashboard/users/add">
+                                    <i class="fas fa-user-plus"></i> Add User
+                                </a>
+                            </li>
+                        <% } %>
                     <% } %>
                 </ul>
                 

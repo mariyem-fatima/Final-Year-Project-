@@ -220,7 +220,20 @@ router.post('/login/fingerprint',
     }
 );
 
-// Logout
+// Logout (GET for direct links, POST for forms)
+router.get('/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            console.error('Logout error:', err);
+            req.flash('error', 'Error logging out');
+            return res.redirect('/dashboard');
+        }
+        res.clearCookie('connect.sid');
+        res.redirect('/auth/login');
+    });
+});
+
+// Logout           
 router.post('/logout', (req, res) => {
     req.session.destroy((err) => {
         if (err) {

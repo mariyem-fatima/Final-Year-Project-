@@ -53,6 +53,32 @@ class Order {
         return `${prefix}${date}${String(nextNumber).padStart(3, '0')}`;
     }
 
+    // Find orders by delivery date
+    static async findByDate(date) {
+        try {
+            const query = `
+                SELECT 
+                    o.*,
+                    c.full_name as customer_name,
+                    c.customer_code,
+                    c.phone_primary as customer_phone,
+                    COALESCE(o.delivery_address, c.address_line1) as customer_address
+                FROM orders o
+                LEFT JOIN customers c ON o.customer_id = c.id
+                WHERE o.next_delivery_date = $1
+                AND o.order_status IN ('pending', 'confirmed', 'in-progress')
+                AND o.bottles_remaining > 0
+                ORDER BY o.priority_level DESC, o.created_at ASC
+            `;
+
+            const result = await pool.query(query, [date]);
+            return result.rows.map(row => new Order(row));
+        } catch (error) {
+            console.error('Error finding orders by date:', error);
+            throw error;
+        }
+    }
+
     // Calculate next delivery date based on subscription type
     static calculateNextDeliveryDate(startDate, subscriptionType, lastDeliveryDate = null, customDates = null) {
         const baseDate = lastDeliveryDate ? moment(lastDeliveryDate) : moment(startDate);

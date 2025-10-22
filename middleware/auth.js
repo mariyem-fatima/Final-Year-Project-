@@ -20,6 +20,58 @@ const isAdmin = (req, res, next) => {
     }
 };
 
+// Staff role middleware (admin or staff)
+const isStaff = (req, res, next) => {
+    if (req.session && req.session.user && 
+        (req.session.user.role === 'admin' || req.session.user.role === 'staff')) {
+        return next();
+    } else {
+        req.flash('error', 'Staff access required');
+        return res.redirect('/dashboard');
+    }
+};
+
+// Driver role middleware (for driver-specific routes)
+const isDriver = (req, res, next) => {
+    if (req.session && req.session.user && req.session.user.role === 'driver') {
+        return next();
+    } else {
+        req.flash('error', 'Driver access required');
+        return res.redirect('/dashboard');
+    }
+};
+
+// Can manage users (admin only)
+const canManageUsers = (req, res, next) => {
+    if (req.session && req.session.user && req.session.user.role === 'admin') {
+        return next();
+    } else {
+        req.flash('error', 'You do not have permission to manage users');
+        return res.redirect('/dashboard');
+    }
+};
+
+// Can manage vehicles (admin only)
+const canManageVehicles = (req, res, next) => {
+    if (req.session && req.session.user && req.session.user.role === 'admin') {
+        return next();
+    } else {
+        req.flash('error', 'You do not have permission to manage vehicles');
+        return res.redirect('/dashboard');
+    }
+};
+
+// Can deliver orders (admin, staff, or driver)
+const canDeliverOrders = (req, res, next) => {
+    if (req.session && req.session.user && 
+        ['admin', 'staff', 'driver'].includes(req.session.user.role)) {
+        return next();
+    } else {
+        req.flash('error', 'You do not have permission to handle deliveries');
+        return res.redirect('/dashboard');
+    }
+};
+
 // Redirect if already authenticated
 const redirectIfAuthenticated = (req, res, next) => {
     if (req.session && req.session.user) {
@@ -79,6 +131,11 @@ const csrfProtection = (req, res, next) => {
 module.exports = {
     isAuthenticated,
     isAdmin,
+    isStaff,
+    isDriver,
+    canManageUsers,
+    canManageVehicles,
+    canDeliverOrders,
     redirectIfAuthenticated,
     createRateLimiter,
     csrfProtection

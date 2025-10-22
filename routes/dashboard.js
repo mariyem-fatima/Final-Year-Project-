@@ -3,11 +3,16 @@ const { body, validationResult } = require('express-validator');
 const router = express.Router();
 
 const User = require('../models/User');
-const { isAuthenticated, isAdmin, csrfProtection } = require('../middleware/auth');
+const { isAuthenticated, isAdmin, canManageUsers, csrfProtection } = require('../middleware/auth');
 
 // Dashboard home page
 router.get('/', isAuthenticated, csrfProtection, async (req, res) => {
     try {
+        // Redirect drivers to their simple dashboard
+        if (req.user.role === 'driver') {
+            return res.redirect('/driver/dashboard');
+        }
+
         const users = await User.getAll();
         res.render('dashboard/index', {
             title: 'Dashboard',
@@ -51,7 +56,8 @@ router.get('/users/add', isAuthenticated, isAdmin, csrfProtection, (req, res) =>
         title: 'Add New User',
         errors: [],
         formData: {},
-        currentUser: req.session.user
+        currentUser: req.session.user,
+        csrfToken: req.session.csrfToken
     });
 });
 
@@ -81,7 +87,7 @@ router.post('/users/add',
             .isNumeric()
             .withMessage('PIN must be 4-6 digits'),
         body('role')
-            .isIn(['user', 'admin'])
+            .isIn(['user', 'staff', 'driver', 'admin'])
             .withMessage('Invalid role selected')
     ],
     async (req, res) => {
@@ -94,7 +100,8 @@ router.post('/users/add',
                     title: 'Add New User',
                     errors: errors.array(),
                     formData: req.body,
-                    currentUser: req.session.user
+                    currentUser: req.session.user,
+                    csrfToken: req.session.csrfToken
                 });
             }
 
@@ -105,7 +112,8 @@ router.post('/users/add',
                     title: 'Add New User',
                     errors: [{ msg: 'User with this email already exists' }],
                     formData: req.body,
-                    currentUser: req.session.user
+                    currentUser: req.session.user,
+                    csrfToken: req.session.csrfToken
                 });
             }
 
@@ -148,7 +156,8 @@ router.get('/users/:id/edit', isAuthenticated, isAdmin, csrfProtection, async (r
             user: user.toJSON(),
             errors: [],
             formData: {},
-            currentUser: req.session.user
+            currentUser: req.session.user,
+            csrfToken: req.session.csrfToken
         });
     } catch (error) {
         console.error('Edit user error:', error);
@@ -177,7 +186,7 @@ router.post('/users/:id/edit',
             .isNumeric()
             .withMessage('PIN must be 4-6 digits'),
         body('role')
-            .isIn(['user', 'admin'])
+            .isIn(['user', 'staff', 'driver', 'admin'])
             .withMessage('Invalid role selected')
     ],
     async (req, res) => {
@@ -193,7 +202,8 @@ router.post('/users/:id/edit',
                     user: user.toJSON(),
                     errors: errors.array(),
                     formData: req.body,
-                    currentUser: req.session.user
+                    currentUser: req.session.user,
+                    csrfToken: req.session.csrfToken
                 });
             }
 

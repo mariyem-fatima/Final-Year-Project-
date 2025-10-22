@@ -270,27 +270,62 @@ class OrderAssignment {
         }
     }
 
-    // Update assignment status
-    static async updateStatus(assignmentId, newStatus, userId, notes = null) {
+    // Find assignments by driver and date
+    static async findByDriverAndDate(driverId, date) {
+        try {
+            const query = `
+                SELECT 
+                    oa.*,
+                    o.order_number, o.bottle_type, o.quantity_per_delivery as total_bottles, 
+                    o.priority_level, o.delivery_instructions as special_instructions,
+                    c.full_name as customer_name, c.phone_primary as customer_phone,
+                    COALESCE(o.delivery_address, c.address_line1) as customer_address,
+                    c.city as customer_city, c.notes as customer_notes,
+                    d.full_name as driver_name, d.phone_primary as driver_phone,
+                    v.license_plate as vehicle_license_plate, v.vehicle_type,
+                    oa.estimated_delivery_time as time_slot
+                FROM order_assignments oa
+                LEFT JOIN orders o ON oa.order_id = o.id
+                LEFT JOIN customers c ON o.customer_id = c.id
+                LEFT JOIN drivers d ON oa.driver_id = d.id
+                LEFT JOIN vehicles v ON oa.vehicle_id = v.id
+                WHERE oa.driver_id = $1 AND oa.assigned_date = $2
+                ORDER BY oa.delivery_sequence ASC, oa.estimated_delivery_time ASC
+            `;
+
+            const result = await pool.query(query, [driverId, date]);
+            return result.rows.map(row => new OrderAssignment(row));
+        } catch (error) {
+            console.error('Error finding assignments by driver and date:', error);
+            throw error;
+        }
+    }
+
+    // Update assignment status with additional data (for driver app)
+    static async updateStatus(assignmentId, newStatus, additionalData = {}) {
         const client = await pool.connect();
         try {
             await client.query('BEGIN');
             
+            const { notes, delivery_notes, delivered_bottles, completed_at, failed_at, failure_reason } = additionalData;
+            
             // Update assignment status
             const assignmentQuery = `
                 UPDATE order_assignments 
-                SET delivery_status = $1::VARCHAR,
-                    notes = COALESCE($2::TEXT, notes),
+                SET delivery_status = $1,
+                    notes = COALESCE($2, notes),
                     actual_delivery_time = CASE 
-                        WHEN $1::VARCHAR = 'delivered' THEN CURRENT_TIME 
+                        WHEN $1 = 'completed' THEN CURRENT_TIME 
+                        WHEN $1 = 'in_progress' THEN COALESCE(actual_delivery_time, CURRENT_TIME)
                         ELSE actual_delivery_time 
                     END,
                     updated_at = CURRENT_TIMESTAMP
-                WHERE id = $3::INTEGER
+                WHERE id = $3
                 RETURNING *
             `;
             
-            const assignmentResult = await client.query(assignmentQuery, [newStatus, notes, assignmentId]);
+            const finalNotes = delivery_notes || failure_reason || notes || null;
+            const assignmentResult = await client.query(assignmentQuery, [newStatus, finalNotes, assignmentId]);
             
             if (assignmentResult.rows.length === 0) {
                 await client.query('ROLLBACK');
@@ -299,9 +334,10 @@ class OrderAssignment {
             
             const assignment = assignmentResult.rows[0];
             
-            // If delivery is completed, update order status and delivery tracking
-            if (newStatus === 'delivered') {
-                // Update order status to in-progress and increment bottles_delivered
+            // If delivery is completed, update bottles and order status
+            if (newStatus === 'completed' && delivered_bottles) {
+                // Update bottles status to delivered (handled by bottle tracking)
+                // Update order status
                 const orderUpdateQuery = `
                     UPDATE orders 
                     SET bottles_delivered = bottles_delivered + quantity_per_delivery,

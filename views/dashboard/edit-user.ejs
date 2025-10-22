@@ -51,9 +51,18 @@
                                         <i class="fas fa-user-tag"></i> Role *
                                     </label>
                                     <select class="form-select" id="role" name="role" required>
-                                        <option value="user" <%= (formData.role || user.role) === 'user' ? 'selected' : '' %>>User</option>
-                                        <option value="admin" <%= (formData.role || user.role) === 'admin' ? 'selected' : '' %>>Administrator</option>
+                                        <option value="user" <%= (formData.role || user.role) === 'user' ? 'selected' : '' %>>User - Basic access only</option>
+                                        <option value="staff" <%= (formData.role || user.role) === 'staff' ? 'selected' : '' %>>Staff - All operations, no admin functions</option>
+                                        <option value="driver" <%= (formData.role || user.role) === 'driver' ? 'selected' : '' %>>Driver - Simple delivery interface</option>
+                                        <option value="admin" <%= (formData.role || user.role) === 'admin' ? 'selected' : '' %>>Administrator - Full system access</option>
                                     </select>
+                                    <div class="form-text">
+                                        <small>
+                                            <strong>Staff:</strong> Can use all modules except user/vehicle management<br>
+                                            <strong>Driver:</strong> Simple interface for deliveries only<br>
+                                            <strong>Admin:</strong> Full access including user and vehicle management
+                                        </small>
+                                    </div>
                                 </div>
                             </div>
 

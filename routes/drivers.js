@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Driver = require('../models/Driver');
 const Vehicle = require('../models/Vehicle');
+const User = require('../models/User');
 const { isAuthenticated: auth } = require('../middleware/auth');
 
 // Drivers listing page
@@ -37,9 +38,13 @@ router.get('/add', auth, async (req, res) => {
     try {
         const availableVehicles = await Vehicle.getAvailable();
         
+        // Get available users (drivers without profiles and admins)
+        const availableUsers = await User.getAvailableForDriverLink();
+        
         res.render('drivers/add-driver', {
             title: 'Add New Driver',
             availableVehicles,
+            users: availableUsers,
             user: req.user
         });
     } catch (error) {
@@ -53,6 +58,7 @@ router.get('/add', auth, async (req, res) => {
 router.post(['/', '/add'], auth, async (req, res) => {
     try {
         const {
+            user_id,  // Add user_id field
             full_name,
             cnic,
             phone_primary,
@@ -108,6 +114,7 @@ router.post(['/', '/add'], auth, async (req, res) => {
         }
 
         const driverData = {
+            user_id: user_id || null,  // Include user_id for linking
             full_name,
             cnic,
             phone_primary,
@@ -172,10 +179,21 @@ router.get('/:id/edit', auth, async (req, res) => {
 
         const availableVehicles = await Vehicle.getAvailable();
         
+        // Get available users (only driver role users without existing driver profiles)
+        const availableUsers = await User.getAvailableForDriverLink();
+        
+        // Get current user info if driver is linked to a user
+        let currentUser = null;
+        if (driver.user_id) {
+            currentUser = await User.findById(driver.user_id);
+        }
+        
         res.render('drivers/edit-driver', {
             title: `Edit Driver - ${driver.full_name}`,
             driver,
             availableVehicles,
+            users: availableUsers,
+            currentUser,
             user: req.user
         });
     } catch (error) {
@@ -190,6 +208,7 @@ router.post('/:id/edit', auth, async (req, res) => {
     try {
         const driverId = req.params.id;
         const {
+            user_id,  // Add user_id field
             full_name,
             cnic,
             phone_primary,
@@ -252,6 +271,7 @@ router.post('/:id/edit', auth, async (req, res) => {
         }
 
         const updateData = {
+            user_id: user_id !== undefined ? (user_id || null) : existingDriver.user_id,  // Handle user assignment
             full_name: full_name || existingDriver.full_name,
             cnic: cnic || existingDriver.cnic,
             phone_primary: phone_primary || existingDriver.phone_primary,
