@@ -76,6 +76,9 @@
                                 <li><a class="dropdown-item" href="/bottle-tracking/deliveries">
                                     <i class="fas fa-truck"></i> Delivery Tracking
                                 </a></li>
+                                <li><a class="dropdown-item" href="/customer-bottles/bottle-inventory">
+                                    <i class="fas fa-users"></i> Customer Inventory
+                                </a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="/assignments/dispatch">
                                     <i class="fas fa-clipboard-list"></i> Dispatch Center
@@ -125,8 +128,54 @@
                             </ul>
                         </li>
 
+                        <!-- Staff Management Dropdown (Admin only) -->
+                        <% if (user.role === 'admin') { %>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="staffDropdown" role="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-people-fill"></i> Staff
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="/staff">
+                                    <i class="bi bi-list-ul"></i> All Staff
+                                </a></li>
+                                <li><a class="dropdown-item" href="/staff/add">
+                                    <i class="bi bi-person-plus"></i> Add Staff
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="/finance/dashboard">
+                                    <i class="bi bi-cash-stack"></i> Payroll
+                                </a></li>
+                            </ul>
+                        </li>
+                        <% } %>
+
                         <!-- Admin-only sections -->
                         <% if (user.role === 'admin') { %>
+                            <!-- Financial Management Dropdown -->
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="financeDropdown" role="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-dollar-sign"></i> Finance
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="/finance/dashboard">
+                                        <i class="fas fa-chart-line"></i> Financial Dashboard
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="/finance/payments">
+                                        <i class="fas fa-cash-register"></i> Collect Payments
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="/finance/expenses">
+                                        <i class="fas fa-receipt"></i> Manage Expenses
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="/finance/packages">
+                                        <i class="fas fa-box"></i> Monthly Packages
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="/finance/reports">
+                                        <i class="fas fa-chart-pie"></i> Financial Reports
+                                    </a></li>
+                                </ul>
+                            </li>
+                            
                             <li class="nav-item">
                                 <a class="nav-link" href="/dashboard/users">
                                     <i class="fas fa-users-cog"></i> Users

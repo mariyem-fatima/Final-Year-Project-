@@ -553,10 +553,10 @@ class OrderAssignment {
                 // Store previous status for history logging
                 const previousStatus = bottle.status;
 
-                // Update bottle status to 'AtCustomer'
+                // Update bottle status to 'AtCustomer' and record customer possession
                 await client.query(
-                    'UPDATE bottles SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-                    ['AtCustomer', bottle.id]
+                    'UPDATE bottles SET status = $1, current_customer_id = $2, delivered_at = CURRENT_TIMESTAMP, delivered_by = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4',
+                    ['AtCustomer', assignment.customer_id, userId, bottle.id]
                 );
 
                 // Log bottle status change with actual previous status
@@ -564,6 +564,17 @@ class OrderAssignment {
                     INSERT INTO bottle_history (bottle_id, previous_status, new_status, changed_by, change_reason)
                     VALUES ($1, $2, $3, $4, $5)
                 `, [bottle.id, previousStatus, 'AtCustomer', userId, `Delivered to customer via assignment ${assignmentId}`]);
+
+                // Record in bottle delivery history for complete tracking
+                await client.query(`
+                    INSERT INTO bottle_delivery_history (
+                        bottle_id, customer_id, order_id, assignment_id, 
+                        delivered_by, status_from, status_to, notes
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                `, [
+                    bottle.id, assignment.customer_id, assignment.order_id, assignmentId,
+                    userId, previousStatus, 'AtCustomer', notes || 'Delivered'
+                ]);
 
                 // Record bottle delivery
                 await client.query(`

@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <%- include('../partials/header') %>
+    <%- include('../partials/flash') %>
+    
+    <div class="container mt-4">
+        <!-- Header Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
+                        <li class="breadcrumb-item"><a href="/staff">Staff</a></li>
+                        <li class="breadcrumb-item active">Add Staff</li>
+                    </ol>
+                </nav>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1><i class="bi bi-person-plus text-primary"></i> Add New Staff Member</h1>
+                        <p class="text-muted mb-0">Add a new team member to your organization</p>
+                    </div>
+                    <a href="/staff" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Staff
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Staff Form -->
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <i class="bi bi-person-badge me-2"></i>Staff Information
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form action="/staff" method="POST" id="addStaffForm">
+                            <!-- Personal Information -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h6 class="text-primary mb-3">
+                                        <i class="bi bi-person me-1"></i>Personal Information
+                                    </h6>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="full_name" class="form-label">Full Name <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="full_name" name="full_name" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="employee_id" class="form-label">Employee ID <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="employee_id" name="employee_id" required>
+                                        <div class="form-text">Unique identifier for the staff member</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="phone" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                                        <input type="tel" class="form-control" id="phone" name="phone" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="emergency_contact" class="form-label">Emergency Contact</label>
+                                        <input type="tel" class="form-control" id="emergency_contact" name="emergency_contact">
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="mb-3">
+                                        <label for="address" class="form-label">Address</label>
+                                        <textarea class="form-control" id="address" name="address" rows="2"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Job Information -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h6 class="text-primary mb-3">
+                                        <i class="bi bi-briefcase me-1"></i>Job Information
+                                    </h6>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="position" class="form-label">Position <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="position" name="position" required>
+                                            <option value="">Select Position</option>
+                                            <option value="Manager">Manager</option>
+                                            <option value="Supervisor">Supervisor</option>
+                                            <option value="Customer Service">Customer Service</option>
+                                            <option value="Dispatcher">Dispatcher</option>
+                                            <option value="Accountant">Accountant</option>
+                                            <option value="HR Specialist">HR Specialist</option>
+                                            <option value="Operations Assistant">Operations Assistant</option>
+                                            <option value="Quality Control">Quality Control</option>
+                                            <option value="Warehouse Staff">Warehouse Staff</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="department" class="form-label">Department</label>
+                                        <select class="form-select" id="department" name="department">
+                                            <option value="">Select Department</option>
+                                            <option value="Operations">Operations</option>
+                                            <option value="Customer Service">Customer Service</option>
+                                            <option value="Finance">Finance</option>
+                                            <option value="Human Resources">Human Resources</option>
+                                            <option value="Quality Assurance">Quality Assurance</option>
+                                            <option value="Logistics">Logistics</option>
+                                            <option value="Administration">Administration</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="hire_date" class="form-label">Hire Date <span class="text-danger">*</span></label>
+                                        <input type="date" class="form-control" id="hire_date" name="hire_date" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="salary" class="form-label">Monthly Salary</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">$</span>
+                                            <input type="number" class="form-control" id="salary" name="salary" step="0.01" min="0">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="work_schedule" class="form-label">Work Schedule</label>
+                                        <select class="form-select" id="work_schedule" name="work_schedule">
+                                            <option value="">Select Schedule</option>
+                                            <option value="Full-time">Full-time</option>
+                                            <option value="Part-time">Part-time</option>
+                                            <option value="Contract">Contract</option>
+                                            <option value="Shift Work">Shift Work</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="status" name="status" required>
+                                            <option value="active">Active</option>
+                                            <option value="inactive">Inactive</option>
+                                            <option value="on_leave">On Leave</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- User Account Information -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h6 class="text-primary mb-3">
+                                        <i class="bi bi-key me-1"></i>User Account (Optional)
+                                    </h6>
+                                    <p class="text-muted small">Link this staff member to an existing user account for system access</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="user_id" class="form-label">Link to User Account</label>
+                                        <select class="form-select" id="user_id" name="user_id">
+                                            <option value="">No user account</option>
+                                            <% if (availableUsers && availableUsers.length > 0) { %>
+                                                <% availableUsers.forEach(user => { %>
+                                                <option value="<%= user.id %>"><%= user.email %> (<%= user.role %>)</option>
+                                                <% }); %>
+                                            <% } %>
+                                        </select>
+                                        <div class="form-text">Select an existing user account to link with this staff member</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="permissions" class="form-label">Access Level</label>
+                                        <select class="form-select" id="permissions" name="permissions">
+                                            <option value="basic">Basic Access</option>
+                                            <option value="advanced">Advanced Access</option>
+                                            <option value="admin">Administrative Access</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Additional Information -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h6 class="text-primary mb-3">
+                                        <i class="bi bi-info-circle me-1"></i>Additional Information
+                                    </h6>
+                                </div>
+                                <div class="col-12">
+                                    <div class="mb-3">
+                                        <label for="notes" class="form-label">Notes</label>
+                                        <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Additional notes about this staff member..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Submit Buttons -->
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-end gap-2">
+                                        <a href="/staff" class="btn btn-outline-secondary">
+                                            <i class="bi bi-x-circle me-1"></i>Cancel
+                                        </a>
+                                        <button type="submit" class="btn btn-success">
+                                            <i class="bi bi-check-lg me-1"></i>Add Staff Member
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+    .card {
+        border-radius: 12px;
+    }
+
+    .form-control, .form-select {
+        border-radius: 8px;
+    }
+
+    .btn {
+        border-radius: 8px;
+        font-weight: 500;
+    }
+
+    .text-primary {
+        color: #0d6efd !important;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+    }
+
+    .form-text {
+        font-size: 0.875em;
+    }
+    </style>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set default hire date to today
+        document.getElementById('hire_date').value = new Date().toISOString().split('T')[0];
+
+        // Generate employee ID suggestion
+        const generateEmployeeId = () => {
+            const prefix = 'EMP';
+            const date = new Date().toISOString().slice(2, 10).replace(/-/g, '');
+            const random = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+            return `${prefix}${date}${random}`;
+        };
+
+        // Set suggested employee ID
+        document.getElementById('employee_id').placeholder = `e.g., ${generateEmployeeId()}`;
+
+        // Form validation
+        const form = document.getElementById('addStaffForm');
+        form.addEventListener('submit', function(e) {
+            const fullName = document.getElementById('full_name').value.trim();
+            const employeeId = document.getElementById('employee_id').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const position = document.getElementById('position').value;
+            
+            if (!fullName || !employeeId || !phone || !position) {
+                e.preventDefault();
+                alert('Please fill in all required fields marked with *');
+                return false;
+            }
+
+            // Validate phone number format
+            const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+            if (!phoneRegex.test(phone.replace(/[\s\-\(\)]/g, ''))) {
+                e.preventDefault();
+                alert('Please enter a valid phone number');
+                return false;
+            }
+        });
+
+        // Auto-format phone number
+        const phoneInput = document.getElementById('phone');
+        phoneInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length >= 6) {
+                value = value.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3');
+            } else if (value.length >= 3) {
+                value = value.replace(/(\d{3})(\d{0,3})/, '($1) $2');
+            }
+            e.target.value = value;
+        });
+
+        // Emergency contact formatting
+        const emergencyInput = document.getElementById('emergency_contact');
+        emergencyInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length >= 6) {
+                value = value.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3');
+            } else if (value.length >= 3) {
+                value = value.replace(/(\d{3})(\d{0,3})/, '($1) $2');
+            }
+            e.target.value = value;
+        });
+    });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>

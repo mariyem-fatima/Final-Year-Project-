@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <%- include('../partials/header') %>
+    <%- include('../partials/flash') %>
+    
+    <div class="container mt-4">
+        <!-- Header Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
+                        <li class="breadcrumb-item active">Staff</li>
+                    </ol>
+                </nav>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1><i class="bi bi-people-fill text-primary"></i> Staff Management</h1>
+                        <p class="text-muted mb-0">Manage your team members and staff assignments</p>
+                    </div>
+                    <a href="/staff/add" class="btn btn-success">
+                        <i class="bi bi-person-plus"></i> Add New Staff
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center" style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white;">
+                        <i class="bi bi-people fs-1 mb-2"></i>
+                        <h3 class="card-title mb-1"><%= staffMembers ? staffMembers.length : 0 %></h3>
+                        <p class="card-text opacity-75">Total Staff</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white;">
+                        <i class="bi bi-check-circle fs-1 mb-2"></i>
+                        <% const activeStaff = staffMembers ? staffMembers.filter(s => s.status === 'active') : []; %>
+                        <h3 class="card-title mb-1"><%= activeStaff.length %></h3>
+                        <p class="card-text opacity-75">Active Staff</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%); color: white;">
+                        <i class="bi bi-briefcase fs-1 mb-2"></i>
+                        <% const departments = staffMembers ? [...new Set(staffMembers.map(s => s.department).filter(d => d))] : []; %>
+                        <h3 class="card-title mb-1"><%= departments.length %></h3>
+                        <p class="card-text opacity-75">Departments</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center" style="background: linear-gradient(135deg, #6610f2 0%, #6f42c1 100%); color: white;">
+                        <i class="bi bi-cash-stack fs-1 mb-2"></i>
+                        <% const totalSalary = staffMembers ? staffMembers.reduce((sum, s) => sum + (parseFloat(s.salary) || 0), 0) : 0; %>
+                        <h3 class="card-title mb-1">$<%= totalSalary.toFixed(0) %></h3>
+                        <p class="card-text opacity-75">Total Payroll</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search and Filter Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="searchInput" class="form-label">Search Staff</label>
+                                <input type="text" class="form-control" id="searchInput" placeholder="Search by name, position, or department...">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="statusFilter" class="form-label">Status</label>
+                                <select class="form-select" id="statusFilter">
+                                    <option value="">All Status</option>
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                    <option value="on_leave">On Leave</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="departmentFilter" class="form-label">Department</label>
+                                <select class="form-select" id="departmentFilter">
+                                    <option value="">All Departments</option>
+                                    <% departments.forEach(dept => { %>
+                                    <option value="<%= dept %>"><%= dept %></option>
+                                    <% }); %>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">&nbsp;</label>
+                                <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">
+                                    <i class="bi bi-x-circle"></i> Clear
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Staff List -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-list-ul me-2"></i>Staff Members
+                        </h5>
+                        <span class="badge bg-primary"><%= staffMembers ? staffMembers.length : 0 %> total</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <% if (staffMembers && staffMembers.length > 0) { %>
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0" id="staffTable">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th><i class="bi bi-person me-1"></i>Staff Member</th>
+                                        <th><i class="bi bi-briefcase me-1"></i>Position</th>
+                                        <th><i class="bi bi-building me-1"></i>Department</th>
+                                        <th><i class="bi bi-cash me-1"></i>Salary</th>
+                                        <th><i class="bi bi-activity me-1"></i>Status</th>
+                                        <th><i class="bi bi-calendar me-1"></i>Joined</th>
+                                        <th><i class="bi bi-gear me-1"></i>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% staffMembers.forEach(staff => { %>
+                                    <tr class="staff-row" data-status="<%= staff.status %>" data-department="<%= staff.department || '' %>">
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                                    <%= staff.full_name ? staff.full_name.charAt(0).toUpperCase() : 'S' %>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0"><%= staff.full_name %></h6>
+                                                    <small class="text-muted">ID: <%= staff.employee_id %></small>
+                                                    <% if (staff.email) { %>
+                                                    <br><small class="text-muted"><%= staff.email %></small>
+                                                    <% } %>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info"><%= staff.position %></span>
+                                        </td>
+                                        <td>
+                                            <% if (staff.department) { %>
+                                            <span class="badge bg-secondary"><%= staff.department %></span>
+                                            <% } else { %>
+                                            <span class="text-muted">Not assigned</span>
+                                            <% } %>
+                                        </td>
+                                        <td>
+                                            <% if (staff.salary) { %>
+                                            <h6 class="text-success mb-0">$<%= parseFloat(staff.salary).toFixed(2) %></h6>
+                                            <small class="text-muted">monthly</small>
+                                            <% } else { %>
+                                            <span class="text-muted">Not set</span>
+                                            <% } %>
+                                        </td>
+                                        <td>
+                                            <% let statusClass = 'bg-secondary'; %>
+                                            <% if (staff.status === 'active') statusClass = 'bg-success'; %>
+                                            <% if (staff.status === 'inactive') statusClass = 'bg-danger'; %>
+                                            <% if (staff.status === 'on_leave') statusClass = 'bg-warning'; %>
+                                            <span class="badge <%= statusClass %>"><%= staff.status ? staff.status.replace('_', ' ').toUpperCase() : 'UNKNOWN' %></span>
+                                        </td>
+                                        <td>
+                                            <% if (staff.hire_date) { %>
+                                            <%= new Date(staff.hire_date).toLocaleDateString() %>
+                                            <% } else { %>
+                                            <span class="text-muted">Not set</span>
+                                            <% } %>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <a href="/staff/<%= staff.id %>" class="btn btn-outline-info" data-bs-toggle="tooltip" title="View Details">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                <a href="/staff/<%= staff.id %>/edit" class="btn btn-outline-warning" data-bs-toggle="tooltip" title="Edit Staff">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                                <% if (user && user.role === 'admin') { %>
+                                                <button class="btn btn-outline-danger" onclick="confirmDelete('<%= staff.id %>', '<%= staff.full_name %>')" data-bs-toggle="tooltip" title="Delete Staff">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                                <% } %>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <% }); %>
+                                </tbody>
+                            </table>
+                        </div>
+                        <% } else { %>
+                        <div class="text-center py-5">
+                            <i class="bi bi-people text-muted" style="font-size: 4rem;"></i>
+                            <h4 class="text-muted mt-3">No Staff Members Found</h4>
+                            <p class="text-muted">Start by adding your first staff member to manage your team.</p>
+                            <a href="/staff/add" class="btn btn-primary">
+                                <i class="bi bi-person-plus me-1"></i>Add First Staff Member
+                            </a>
+                        </div>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Confirm Deletion
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete staff member <strong id="staffName"></strong>?</p>
+                    <p class="text-muted small">This action cannot be undone. All associated data will be permanently removed.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form id="deleteForm" method="POST" class="d-inline">
+                        <input type="hidden" name="_method" value="DELETE">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash me-1"></i>Delete Staff
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+    .avatar-sm {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    .card {
+        border-radius: 12px;
+        transition: transform 0.2s ease-in-out;
+    }
+
+    .table thead th {
+        border: none;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.85em;
+        letter-spacing: 0.5px;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f8f9fa !important;
+    }
+
+    .btn {
+        border-radius: 8px;
+        font-weight: 500;
+    }
+
+    .badge {
+        font-size: 0.75em;
+        font-weight: 500;
+    }
+    </style>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Search functionality
+        const searchInput = document.getElementById('searchInput');
+        const statusFilter = document.getElementById('statusFilter');
+        const departmentFilter = document.getElementById('departmentFilter');
+
+        function filterTable() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const statusValue = statusFilter.value;
+            const departmentValue = departmentFilter.value;
+            const rows = document.querySelectorAll('.staff-row');
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                const status = row.getAttribute('data-status');
+                const department = row.getAttribute('data-department');
+
+                const matchesSearch = text.includes(searchTerm);
+                const matchesStatus = !statusValue || status === statusValue;
+                const matchesDepartment = !departmentValue || department === departmentValue;
+
+                row.style.display = matchesSearch && matchesStatus && matchesDepartment ? '' : 'none';
+            });
+        }
+
+        searchInput.addEventListener('keyup', filterTable);
+        statusFilter.addEventListener('change', filterTable);
+        departmentFilter.addEventListener('change', filterTable);
+
+        // Initialize tooltips
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+
+    function clearFilters() {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('statusFilter').value = '';
+        document.getElementById('departmentFilter').value = '';
+        
+        const rows = document.querySelectorAll('.staff-row');
+        rows.forEach(row => {
+            row.style.display = '';
+        });
+    }
+
+    function confirmDelete(staffId, staffName) {
+        document.getElementById('staffName').textContent = staffName;
+        document.getElementById('deleteForm').action = `/staff/${staffId}`;
+        
+        const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        modal.show();
+    }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>

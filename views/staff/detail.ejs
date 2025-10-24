@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <%- include('../partials/header') %>
+    <%- include('../partials/flash') %>
+    
+    <div class="container mt-4">
+        <!-- Header Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
+                        <li class="breadcrumb-item"><a href="/staff">Staff</a></li>
+                        <li class="breadcrumb-item active"><%= staff.full_name %></li>
+                    </ol>
+                </nav>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1><i class="bi bi-person-badge text-primary"></i> <%= staff.full_name %></h1>
+                        <p class="text-muted mb-0">Staff member details and information</p>
+                    </div>
+                    <div class="btn-group">
+                        <a href="/staff" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Back to Staff
+                        </a>
+                        <a href="/staff/<%= staff.id %>/edit" class="btn btn-warning">
+                            <i class="bi bi-pencil me-1"></i>Edit Staff
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Staff Profile Card -->
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body text-center">
+                        <div class="avatar-lg bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3">
+                            <%= staff.full_name.charAt(0).toUpperCase() %>
+                        </div>
+                        <h4 class="mb-1"><%= staff.full_name %></h4>
+                        <p class="text-muted mb-2"><%= staff.position %></p>
+                        <% let statusClass = 'bg-secondary'; %>
+                        <% if (staff.status === 'active') statusClass = 'bg-success'; %>
+                        <% if (staff.status === 'inactive') statusClass = 'bg-danger'; %>
+                        <% if (staff.status === 'on_leave') statusClass = 'bg-warning'; %>
+                        <span class="badge <%= statusClass %> mb-3"><%= staff.status ? staff.status.replace('_', ' ').toUpperCase() : 'UNKNOWN' %></span>
+                        
+                        <div class="row text-center mt-3">
+                            <div class="col-4">
+                                <h6 class="mb-0">Employee ID</h6>
+                                <small class="text-muted"><%= staff.employee_id %></small>
+                            </div>
+                            <div class="col-4">
+                                <h6 class="mb-0">Department</h6>
+                                <small class="text-muted"><%= staff.department || 'Not assigned' %></small>
+                            </div>
+                            <div class="col-4">
+                                <h6 class="mb-0">Joined</h6>
+                                <small class="text-muted">
+                                    <% if (staff.hire_date) { %>
+                                        <%= new Date(staff.hire_date).toLocaleDateString() %>
+                                    <% } else { %>
+                                        Not set
+                                    <% } %>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">
+                            <i class="bi bi-lightning me-1"></i>Quick Actions
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="/staff/<%= staff.id %>/edit" class="btn btn-outline-primary">
+                                <i class="bi bi-pencil me-1"></i>Edit Information
+                            </a>
+                            <% if (staff.user_id) { %>
+                            <a href="/dashboard/users/<%= staff.user_id %>" class="btn btn-outline-info">
+                                <i class="bi bi-person-gear me-1"></i>User Account
+                            </a>
+                            <% } %>
+                            <button class="btn btn-outline-success" onclick="generatePayslip()">
+                                <i class="bi bi-file-earmark-text me-1"></i>Generate Payslip
+                            </button>
+                            <% if (user && user.role === 'admin') { %>
+                            <button class="btn btn-outline-danger" onclick="confirmDelete()">
+                                <i class="bi bi-trash me-1"></i>Delete Staff
+                            </button>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Staff Details -->
+            <div class="col-lg-8">
+                <!-- Personal Information -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">
+                            <i class="bi bi-person me-1"></i>Personal Information
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Full Name</label>
+                                    <p class="mb-0"><%= staff.full_name %></p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Phone Number</label>
+                                    <p class="mb-0">
+                                        <% if (staff.phone) { %>
+                                            <a href="tel:<%= staff.phone %>" class="text-decoration-none">
+                                                <i class="bi bi-telephone me-1"></i><%= staff.phone %>
+                                            </a>
+                                        <% } else { %>
+                                            <span class="text-muted">Not provided</span>
+                                        <% } %>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Emergency Contact</label>
+                                    <p class="mb-0">
+                                        <% if (staff.emergency_contact) { %>
+                                            <a href="tel:<%= staff.emergency_contact %>" class="text-decoration-none">
+                                                <i class="bi bi-telephone-fill me-1"></i><%= staff.emergency_contact %>
+                                            </a>
+                                        <% } else { %>
+                                            <span class="text-muted">Not provided</span>
+                                        <% } %>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Email</label>
+                                    <p class="mb-0">
+                                        <% if (staff.email) { %>
+                                            <a href="mailto:<%= staff.email %>" class="text-decoration-none">
+                                                <i class="bi bi-envelope me-1"></i><%= staff.email %>
+                                            </a>
+                                        <% } else { %>
+                                            <span class="text-muted">Not linked to user account</span>
+                                        <% } %>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Address</label>
+                                    <p class="mb-0">
+                                        <% if (staff.address) { %>
+                                            <%= staff.address %>
+                                        <% } else { %>
+                                            <span class="text-muted">Not provided</span>
+                                        <% } %>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Job Information -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">
+                            <i class="bi bi-briefcase me-1"></i>Job Information
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Position</label>
+                                    <p class="mb-0">
+                                        <span class="badge bg-info"><%= staff.position %></span>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Department</label>
+                                    <p class="mb-0">
+                                        <% if (staff.department) { %>
+                                            <span class="badge bg-secondary"><%= staff.department %></span>
+                                        <% } else { %>
+                                            <span class="text-muted">Not assigned</span>
+                                        <% } %>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Hire Date</label>
+                                    <p class="mb-0">
+                                        <% if (staff.hire_date) { %>
+                                            <%= new Date(staff.hire_date).toLocaleDateString('en-US', { 
+                                                year: 'numeric', 
+                                                month: 'long', 
+                                                day: 'numeric' 
+                                            }) %>
+                                            <% const yearsEmployed = Math.floor((new Date() - new Date(staff.hire_date)) / (365.25 * 24 * 60 * 60 * 1000)); %>
+                                            <% if (yearsEmployed > 0) { %>
+                                                <br><small class="text-muted"><%= yearsEmployed %> year<%= yearsEmployed > 1 ? 's' : '' %> of service</small>
+                                            <% } %>
+                                        <% } else { %>
+                                            <span class="text-muted">Not set</span>
+                                        <% } %>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Monthly Salary</label>
+                                    <p class="mb-0">
+                                        <% if (staff.salary) { %>
+                                            <span class="text-success fw-bold">$<%= parseFloat(staff.salary).toFixed(2) %></span>
+                                        <% } else { %>
+                                            <span class="text-muted">Not set</span>
+                                        <% } %>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Work Schedule</label>
+                                    <p class="mb-0">
+                                        <% if (staff.work_schedule) { %>
+                                            <%= staff.work_schedule %>
+                                        <% } else { %>
+                                            <span class="text-muted">Not specified</span>
+                                        <% } %>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Access Level</label>
+                                    <p class="mb-0">
+                                        <% if (staff.permissions) { %>
+                                            <span class="badge bg-primary"><%= staff.permissions.replace('_', ' ').toUpperCase() %></span>
+                                        <% } else { %>
+                                            <span class="text-muted">Basic Access</span>
+                                        <% } %>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Information -->
+                <% if (staff.notes) { %>
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">
+                            <i class="bi bi-sticky me-1"></i>Notes
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-0"><%= staff.notes %></p>
+                    </div>
+                </div>
+                <% } %>
+
+                <!-- System Information -->
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">
+                            <i class="bi bi-info-circle me-1"></i>System Information
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Created Date</label>
+                                    <p class="mb-0">
+                                        <% if (staff.created_at) { %>
+                                            <%= new Date(staff.created_at).toLocaleDateString('en-US', { 
+                                                year: 'numeric', 
+                                                month: 'long', 
+                                                day: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            }) %>
+                                        <% } else { %>
+                                            <span class="text-muted">Unknown</span>
+                                        <% } %>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Last Updated</label>
+                                    <p class="mb-0">
+                                        <% if (staff.updated_at) { %>
+                                            <%= new Date(staff.updated_at).toLocaleDateString('en-US', { 
+                                                year: 'numeric', 
+                                                month: 'long', 
+                                                day: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            }) %>
+                                        <% } else { %>
+                                            <span class="text-muted">Never updated</span>
+                                        <% } %>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Linked User Account</label>
+                                    <p class="mb-0">
+                                        <% if (staff.user_id) { %>
+                                            <span class="badge bg-success">Linked</span>
+                                            <% if (staff.email) { %>
+                                                <br><small class="text-muted"><%= staff.email %></small>
+                                            <% } %>
+                                        <% } else { %>
+                                            <span class="badge bg-warning">Not Linked</span>
+                                        <% } %>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Staff ID</label>
+                                    <p class="mb-0">
+                                        <code>#<%= staff.id %></code>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Confirm Deletion
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete staff member <strong><%= staff.full_name %></strong>?</p>
+                    <p class="text-muted small">This action cannot be undone. All associated data will be permanently removed.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form action="/staff/<%= staff.id %>" method="POST" class="d-inline">
+                        <input type="hidden" name="_method" value="DELETE">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash me-1"></i>Delete Staff
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+    .avatar-lg {
+        width: 80px;
+        height: 80px;
+        font-size: 32px;
+        font-weight: 600;
+    }
+
+    .card {
+        border-radius: 12px;
+    }
+
+    .btn {
+        border-radius: 8px;
+        font-weight: 500;
+    }
+
+    .badge {
+        font-size: 0.75em;
+        font-weight: 500;
+    }
+
+    .form-label {
+        font-size: 0.875em;
+        color: #6c757d;
+        margin-bottom: 0.25rem;
+    }
+    </style>
+
+    <script>
+    function confirmDelete() {
+        const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        modal.show();
+    }
+
+    function generatePayslip() {
+        // This would typically generate a PDF payslip
+        alert('Payslip generation feature coming soon!');
+    }
+
+    // Initialize tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>

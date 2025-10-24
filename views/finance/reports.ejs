@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <%- include('../partials/header') %>
+    <%- include('../partials/flash') %>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="text-primary mb-1">
+                        <i class="bi bi-graph-up me-2"></i>Financial Reports
+                    </h2>
+                    <p class="text-muted">Comprehensive business analytics and financial insights</p>
+                </div>
+                <div class="btn-group">
+                    <a href="/finance/dashboard" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+                    </a>
+                    <button class="btn btn-primary" onclick="exportReport()">
+                        <i class="bi bi-download me-1"></i>Export Report
+                    </button>
+                </div>
+            </div>
+
+            <!-- Date Range Filter -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <form method="GET" class="row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label for="start_date" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" name="start_date" 
+                                   value="<%= startDate || new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0] %>">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="end_date" class="form-label">End Date</label>
+                            <input type="date" class="form-control" name="end_date" 
+                                   value="<%= endDate || new Date().toISOString().split('T')[0] %>">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="report_type" class="form-label">Report Type</label>
+                            <select class="form-select" name="report_type">
+                                <option value="summary" <%= reportType === 'summary' ? 'selected' : '' %>>Summary</option>
+                                <option value="detailed" <%= reportType === 'detailed' ? 'selected' : '' %>>Detailed</option>
+                                <option value="profit_loss" <%= reportType === 'profit_loss' ? 'selected' : '' %>>Profit & Loss</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-search me-1"></i>Generate Report
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body text-center" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white;">
+                            <i class="bi bi-cash-stack fs-1 mb-2"></i>
+                            <h3 class="card-title mb-1">$<%= reportData.totalRevenue.toFixed(2) %></h3>
+                            <p class="card-text opacity-75">Total Revenue</p>
+                            <small class="opacity-50">
+                                <% const revenueChange = reportData.revenueChange || 0; %>
+                                <%= revenueChange >= 0 ? '+' : '' %><%= revenueChange.toFixed(1) %>% from last period
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body text-center" style="background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%); color: white;">
+                            <i class="bi bi-credit-card fs-1 mb-2"></i>
+                            <h3 class="card-title mb-1">$<%= reportData.totalExpenses.toFixed(2) %></h3>
+                            <p class="card-text opacity-75">Total Expenses</p>
+                            <small class="opacity-50">
+                                <% const expenseChange = reportData.expenseChange || 0; %>
+                                <%= expenseChange >= 0 ? '+' : '' %><%= expenseChange.toFixed(1) %>% from last period
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body text-center" style="background: linear-gradient(135deg, #6610f2 0%, #6f42c1 100%); color: white;">
+                            <i class="bi bi-graph-up fs-1 mb-2"></i>
+                            <% const netProfit = reportData.totalRevenue - reportData.totalExpenses; %>
+                            <h3 class="card-title mb-1">$<%= netProfit.toFixed(2) %></h3>
+                            <p class="card-text opacity-75">Net Profit</p>
+                            <small class="opacity-50">
+                                <% const profitMargin = reportData.totalRevenue > 0 ? (netProfit / reportData.totalRevenue * 100) : 0; %>
+                                <%= profitMargin.toFixed(1) %>% profit margin
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body text-center" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%); color: white;">
+                            <i class="bi bi-truck fs-1 mb-2"></i>
+                            <h3 class="card-title mb-1"><%= reportData.totalOrders %></h3>
+                            <p class="card-text opacity-75">Orders Completed</p>
+                            <small class="opacity-50">
+                                <% const avgOrderValue = reportData.totalOrders > 0 ? (reportData.totalRevenue / reportData.totalOrders) : 0; %>
+                                $<%= avgOrderValue.toFixed(2) %> avg order value
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="row mb-4">
+                <div class="col-md-8">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">
+                                <i class="bi bi-bar-chart me-2"></i>Revenue vs Expenses Trend
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="revenueExpenseChart" height="100"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">
+                                <i class="bi bi-pie-chart me-2"></i>Expense Categories
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="expenseCategoryChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Tables -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="bi bi-arrow-up-circle text-success me-2"></i>Recent Revenue
+                            </h5>
+                            <span class="badge bg-success"><%= reportData.revenueTransactions.length %> transactions</span>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Description</th>
+                                            <th class="text-end">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% if (reportData.revenueTransactions.length > 0) { %>
+                                            <% reportData.revenueTransactions.slice(0, 10).forEach(transaction => { %>
+                                            <tr>
+                                                <td>
+                                                    <small><%= new Date(transaction.created_at).toLocaleDateString() %></small>
+                                                </td>
+                                                <td>
+                                                    <%= transaction.description || 'Order Payment' %>
+                                                    <br>
+                                                    <small class="text-muted"><%= transaction.payment_method %></small>
+                                                </td>
+                                                <td class="text-end">
+                                                    <span class="text-success fw-bold">+$<%= parseFloat(transaction.amount).toFixed(2) %></span>
+                                                </td>
+                                            </tr>
+                                            <% }); %>
+                                        <% } else { %>
+                                            <tr>
+                                                <td colspan="3" class="text-center text-muted py-4">No revenue transactions found</td>
+                                            </tr>
+                                        <% } %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="bi bi-arrow-down-circle text-danger me-2"></i>Recent Expenses
+                            </h5>
+                            <span class="badge bg-danger"><%= reportData.expenseTransactions.length %> transactions</span>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Category</th>
+                                            <th class="text-end">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% if (reportData.expenseTransactions.length > 0) { %>
+                                            <% reportData.expenseTransactions.slice(0, 10).forEach(transaction => { %>
+                                            <tr>
+                                                <td>
+                                                    <small><%= new Date(transaction.created_at).toLocaleDateString() %></small>
+                                                </td>
+                                                <td>
+                                                    <%= transaction.category %>
+                                                    <br>
+                                                    <small class="text-muted"><%= transaction.description %></small>
+                                                </td>
+                                                <td class="text-end">
+                                                    <span class="text-danger fw-bold">-$<%= parseFloat(transaction.amount).toFixed(2) %></span>
+                                                </td>
+                                            </tr>
+                                            <% }); %>
+                                        <% } else { %>
+                                            <tr>
+                                                <td colspan="3" class="text-center text-muted py-4">No expense transactions found</td>
+                                            </tr>
+                                        <% } %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    border-radius: 12px;
+    transition: transform 0.2s ease-in-out;
+}
+
+.table thead th {
+    border: none;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85em;
+    letter-spacing: 0.5px;
+}
+
+.table tbody tr:hover {
+    background-color: #f8f9fa !important;
+}
+
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Revenue vs Expenses Chart
+    const revenueExpenseCtx = document.getElementById('revenueExpenseChart').getContext('2d');
+    new Chart(revenueExpenseCtx, {
+        type: 'line',
+        data: {
+            labels: <%- JSON.stringify(reportData.chartLabels || []) %>,
+            datasets: [{
+                label: 'Revenue',
+                data: <%- JSON.stringify(reportData.revenueData || []) %>,
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                fill: true
+            }, {
+                label: 'Expenses',
+                data: <%- JSON.stringify(reportData.expenseData || []) %>,
+                borderColor: '#dc3545',
+                backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toFixed(0);
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
+            }
+        }
+    });
+
+    // Expense Categories Pie Chart
+    const expenseCategoryCtx = document.getElementById('expenseCategoryChart').getContext('2d');
+    new Chart(expenseCategoryCtx, {
+        type: 'doughnut',
+        data: {
+            labels: <%- JSON.stringify(reportData.expenseCategories || []) %>,
+            datasets: [{
+                data: <%- JSON.stringify(reportData.expenseCategoryData || []) %>,
+                backgroundColor: [
+                    '#dc3545',
+                    '#fd7e14',
+                    '#ffc107',
+                    '#28a745',
+                    '#20c997',
+                    '#17a2b8',
+                    '#6610f2',
+                    '#6f42c1'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+});
+
+function exportReport() {
+    const startDate = document.querySelector('input[name="start_date"]').value;
+    const endDate = document.querySelector('input[name="end_date"]').value;
+    const reportType = document.querySelector('select[name="report_type"]').value;
+    
+    window.open(`/finance/reports/export?start_date=${startDate}&end_date=${endDate}&report_type=${reportType}`, '_blank');
+}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>
