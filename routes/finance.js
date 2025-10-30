@@ -3,18 +3,8 @@ const router = express.Router();
 const { pool } = require('../models/database');
 const { isAuthenticated, isAdmin } = require('../middleware/auth');
 
-// Helper middleware for admin access only
-const requireAdmin = (req, res, next) => {
-    if (req.session && req.session.user && req.session.user.role === 'admin') {
-        return next();
-    } else {
-        req.flash('error', 'Admin access required for financial management');
-        return res.redirect('/dashboard');
-    }
-};
-
 // Financial Dashboard - Admin Only
-router.get('/dashboard', isAuthenticated, requireAdmin, async (req, res) => {
+router.get('/dashboard', isAuthenticated, isAdmin, async (req, res) => {
     try {
         // Get financial overview
         const overviewQuery = `
@@ -57,9 +47,9 @@ router.get('/dashboard', isAuthenticated, requireAdmin, async (req, res) => {
             JOIN orders o ON oa.order_id = o.id
             JOIN customers c ON o.customer_id = c.id
             LEFT JOIN drivers d ON oa.driver_id = d.id
-            WHERE oa.delivery_status = 'delivered' 
-            AND (oa.payment_collected = FALSE OR oa.payment_collected IS NULL)
-            ORDER BY oa.actual_delivery_time DESC
+            WHERE oa.status = 'delivered' 
+            AND oa.payment_status = 'pending'
+            ORDER BY oa.delivered_at DESC
             LIMIT 20
         `;
         const pendingResult = await pool.query(pendingQuery);
@@ -70,7 +60,7 @@ router.get('/dashboard', isAuthenticated, requireAdmin, async (req, res) => {
             SELECT 
                 COUNT(*) as total_packages,
                 SUM(monthly_amount) as total_monthly_revenue,
-                COUNT(CASE WHEN next_payment_due <= CURRENT_DATE THEN 1 END) as overdue_packages
+                COUNT(CASE WHEN end_date <= CURRENT_DATE THEN 1 END) as overdue_packages
             FROM monthly_packages 
             WHERE status = 'active'
         `;
@@ -94,7 +84,7 @@ router.get('/dashboard', isAuthenticated, requireAdmin, async (req, res) => {
 });
 
 // Payment Collection Interface
-router.get('/payments', isAuthenticated, requireAdmin, async (req, res) => {
+router.get('/payments', isAuthenticated, isAdmin, async (req, res) => {
     try {
         // Get all pending payments from delivered orders
         const query = `
@@ -115,9 +105,9 @@ router.get('/payments', isAuthenticated, requireAdmin, async (req, res) => {
             JOIN orders o ON oa.order_id = o.id
             JOIN customers c ON o.customer_id = c.id
             LEFT JOIN drivers d ON oa.driver_id = d.id
-            WHERE oa.delivery_status = 'delivered' 
-            AND (oa.payment_collected = FALSE OR oa.payment_collected IS NULL)
-            ORDER BY oa.actual_delivery_time DESC
+            WHERE oa.status = 'delivered' 
+            AND oa.payment_status = 'pending'
+            ORDER BY oa.delivered_at DESC
         `;
         
         const result = await pool.query(query);
@@ -137,7 +127,7 @@ router.get('/payments', isAuthenticated, requireAdmin, async (req, res) => {
 });
 
 // Mark Payment as Collected
-router.post('/payments/:assignmentId/collect', isAuthenticated, requireAdmin, async (req, res) => {
+router.post('/payments/:assignmentId/collect', isAuthenticated, isAdmin, async (req, res) => {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
@@ -164,12 +154,13 @@ router.post('/payments/:assignmentId/collect', isAuthenticated, requireAdmin, as
         // Update assignment payment status
         await client.query(`
             UPDATE order_assignments 
-            SET payment_collected = TRUE,
-                payment_collected_by = $1,
-                payment_collected_at = CURRENT_TIMESTAMP,
-                collection_notes = $2
-            WHERE id = $3
-        `, [req.user.id, payment_notes, assignmentId]);
+            SET payment_status = 'completed',
+                payment_method = $1,
+                payment_amount = $2,
+                notes = $3,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $4
+        `, [payment_method, amount, payment_notes, assignmentId]);
 
         // Update order payment status
         await client.query(`
@@ -219,7 +210,7 @@ router.post('/payments/:assignmentId/collect', isAuthenticated, requireAdmin, as
 });
 
 // Monthly Packages Management
-router.get('/packages', isAuthenticated, requireAdmin, async (req, res) => {
+router.get('/packages', isAuthenticated, isAdmin, async (req, res) => {
     try {
         // Get monthly packages with customer info
         const packagesQuery = `
@@ -229,13 +220,14 @@ router.get('/packages', isAuthenticated, requireAdmin, async (req, res) => {
                 c.phone_primary,
                 c.email,
                 CASE 
-                    WHEN mp.next_payment_due <= CURRENT_DATE THEN 'overdue'
-                    WHEN mp.next_payment_due <= CURRENT_DATE + INTERVAL '7 days' THEN 'due_soon'
-                    ELSE 'current'
+                    WHEN mp.end_date IS NOT NULL AND mp.end_date <= CURRENT_DATE THEN 'expired'
+                    WHEN mp.status = 'suspended' THEN 'suspended'
+                    WHEN mp.status = 'cancelled' THEN 'cancelled'
+                    ELSE 'active'
                 END as payment_status_flag
             FROM monthly_packages mp
             JOIN customers c ON mp.customer_id = c.id
-            ORDER BY mp.next_payment_due ASC, c.full_name
+            ORDER BY mp.start_date DESC, c.full_name
         `;
         
         // Get customers for dropdown
@@ -247,9 +239,10 @@ router.get('/packages', isAuthenticated, requireAdmin, async (req, res) => {
         
         // Get categories for dropdown
         const categoriesQuery = `
-            SELECT DISTINCT category_name 
+            SELECT DISTINCT name as category_name 
             FROM financial_categories 
-            ORDER BY category_name
+            WHERE type = 'expense'
+            ORDER BY name
         `;
         
         // Get staff members
@@ -294,7 +287,7 @@ router.get('/packages', isAuthenticated, requireAdmin, async (req, res) => {
 });
 
 // Add Monthly Package
-router.post('/packages', isAuthenticated, requireAdmin, async (req, res) => {
+router.post('/packages', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const {
             customer_id,
@@ -333,7 +326,7 @@ router.post('/packages', isAuthenticated, requireAdmin, async (req, res) => {
 });
 
 // Expense Management
-router.get('/expenses', isAuthenticated, requireAdmin, async (req, res) => {
+router.get('/expenses', isAuthenticated, isAdmin, async (req, res) => {
     try {
         // Get recent expenses
         const expensesQuery = `
@@ -350,8 +343,8 @@ router.get('/expenses', isAuthenticated, requireAdmin, async (req, res) => {
         // Get expense categories
         const categoriesQuery = `
             SELECT * FROM financial_categories 
-            WHERE category_type = 'expense' AND is_active = TRUE
-            ORDER BY category_name
+            WHERE type = 'expense' AND is_active = TRUE
+            ORDER BY name
         `;
         const categoriesResult = await pool.query(categoriesQuery);
         const categories = categoriesResult.rows;
@@ -392,7 +385,7 @@ router.get('/expenses', isAuthenticated, requireAdmin, async (req, res) => {
 });
 
 // Add Expense
-router.post('/expenses', isAuthenticated, requireAdmin, async (req, res) => {
+router.post('/expenses', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const {
             category,
@@ -446,7 +439,7 @@ router.post('/expenses', isAuthenticated, requireAdmin, async (req, res) => {
 });
 
 // Financial Reports
-router.get('/reports', isAuthenticated, requireAdmin, async (req, res) => {
+router.get('/reports', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const { start_date, end_date, report_type } = req.query;
         
