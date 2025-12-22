@@ -37,7 +37,7 @@ class Bottle {
                 timestamp: Date.now(),
                 company: 'Water Management System'
             };
-            
+
             const qrString = JSON.stringify(qrData);
             const qrCodeDataURL = await QRCode.toDataURL(qrString, {
                 errorCorrectionLevel: 'M',
@@ -50,7 +50,7 @@ class Bottle {
                 },
                 width: 200
             });
-            
+
             return qrCodeDataURL;
         } catch (error) {
             console.error('Error generating QR code:', error);
@@ -62,10 +62,10 @@ class Bottle {
     static async create(bottleData, createdByUserId) {
         try {
             const { bottleType, description, batchNumber, expiryDate } = bottleData;
-            
+
             // Determine if bottle is refillable (5L and 20L are refillable)
             const isRefillable = bottleType === '5L' || bottleType === '20L';
-            
+
             // Generate unique bottle code
             let bottleCode;
             let isUnique = false;
@@ -87,8 +87,8 @@ class Bottle {
             const result = await pool.query(`
                 INSERT INTO bottles (
                     bottle_code, bottle_type, qr_code_data, description, 
-                    expiry_date, batch_number, created_by, is_refillable
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                    expiry_date, batch_number, created_by, is_refillable, qr_code
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $1)
                 RETURNING *
             `, [
                 bottleCode, bottleType, qrCodeData, description,
@@ -96,10 +96,10 @@ class Bottle {
             ]);
 
             const newBottle = new Bottle(result.rows[0]);
-            
+
             // Log initial status
             await this.logStatusChange(newBottle.id, null, 'AtPlant', createdByUserId, 'Initial bottle creation');
-            
+
             return newBottle;
         } catch (error) {
             console.error('Error creating bottle:', error);
@@ -138,14 +138,14 @@ class Bottle {
     // Get all bottles with pagination and filters
     static async getAll(options = {}) {
         try {
-            const { 
-                page = 1, 
-                limit = 20, 
-                status = null, 
-                bottleType = null, 
-                search = null 
+            const {
+                page = 1,
+                limit = 20,
+                status = null,
+                bottleType = null,
+                search = null
             } = options;
-            
+
             const offset = (page - 1) * limit;
             let whereConditions = [];
             let queryParams = [];
@@ -183,7 +183,7 @@ class Bottle {
 
             queryParams.push(limit, offset);
             const result = await pool.query(query, queryParams);
-            
+
             const bottles = result.rows.map(row => ({
                 ...new Bottle(row),
                 createdByEmail: row.created_by_email,
@@ -202,7 +202,7 @@ class Bottle {
         try {
             const { bottleType, description, status, batchNumber, expiryDate } = updateData;
             const currentBottle = await this.findById(id);
-            
+
             if (!currentBottle) {
                 throw new Error('Bottle not found');
             }
@@ -237,13 +237,13 @@ class Bottle {
             if (status && status !== currentBottle.status) {
                 updateFields.push(`status = $${paramCount++}, last_status_change = CURRENT_TIMESTAMP`);
                 values.push(status);
-                
+
                 // Log status change
                 await this.logStatusChange(
-                    id, 
-                    currentBottle.status, 
-                    status, 
-                    updatedByUserId, 
+                    id,
+                    currentBottle.status,
+                    status,
+                    updatedByUserId,
                     `Status changed from ${currentBottle.status} to ${status}`
                 );
             }
@@ -352,13 +352,13 @@ class Bottle {
                 'SELECT * FROM bottles WHERE bottle_code = $1',
                 [bottleCode]
             );
-            
+
             if (bottleResult.rows.length === 0) {
                 throw new Error('Bottle not found');
             }
 
             const bottle = bottleResult.rows[0];
-            
+
             if (bottle.status !== 'AtPlant') {
                 throw new Error(`Bottle is currently ${bottle.status}, cannot transfer from plant`);
             }
@@ -376,7 +376,7 @@ class Bottle {
                     scanned_by, scan_method, transfer_reason
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7)
             `, [
-                bottle.id, 'Plant', 'Vehicle', vehicleId, 
+                bottle.id, 'Plant', 'Vehicle', vehicleId,
                 scannedBy, scanMethod, 'Plant to vehicle transfer'
             ]);
 
@@ -404,13 +404,13 @@ class Bottle {
                 'SELECT * FROM bottles WHERE bottle_code = $1',
                 [bottleCode]
             );
-            
+
             if (bottleResult.rows.length === 0) {
                 throw new Error('Bottle not found');
             }
 
             const bottle = bottleResult.rows[0];
-            
+
             if (!bottle.is_refillable) {
                 throw new Error('Non-refillable bottles cannot be returned to plant');
             }
@@ -434,7 +434,7 @@ class Bottle {
                     scanned_by, scan_method, transfer_reason
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7)
             `, [
-                bottle.id, fromLocation, 'Plant', fromVehicleId, 
+                bottle.id, fromLocation, 'Plant', fromVehicleId,
                 scannedBy, scanMethod, 'Returned to plant for refill'
             ]);
 
@@ -480,7 +480,7 @@ class Bottle {
                 LEFT JOIN users u ON b.created_by = u.id
                 WHERE b.status = 'AtPlant'
             `;
-            
+
             const params = [];
             let paramCount = 1;
 

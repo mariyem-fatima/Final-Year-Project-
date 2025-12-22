@@ -13,12 +13,12 @@ router.get('/', isAuthenticated, csrfProtection, async (req, res) => {
         const bottleType = req.query.bottleType || null;
         const search = req.query.search || null;
 
-        const bottles = await Bottle.getAll({ 
-            page, 
-            limit: 20, 
-            status, 
-            bottleType, 
-            search 
+        const bottles = await Bottle.getAll({
+            page,
+            limit: 20,
+            status,
+            bottleType,
+            search
         });
 
         const statistics = await Bottle.getStatistics();
@@ -89,7 +89,8 @@ router.post('/add',
                     title: 'Add New Bottle',
                     errors: errors.array(),
                     formData: req.body,
-                    currentUser: req.session.user
+                    currentUser: req.session.user,
+                    csrfToken: req.session.csrfToken
                 });
             }
 
@@ -110,7 +111,8 @@ router.post('/add',
                 title: 'Add New Bottle',
                 errors: [],
                 formData: req.body,
-                currentUser: req.session.user
+                currentUser: req.session.user,
+                csrfToken: req.session.csrfToken
             });
         }
     }
@@ -234,20 +236,20 @@ router.post('/:id/delete', isAuthenticated, csrfProtection, async (req, res) => 
     try {
         const bottleId = req.params.id;
         const bottle = await Bottle.findById(bottleId);
-        
+
         if (!bottle) {
             req.flash('error', 'Bottle not found');
             return res.redirect('/bottles');
         }
 
         const success = await Bottle.delete(bottleId);
-        
+
         if (success) {
             req.flash('success', `Bottle ${bottle.bottleCode} has been deleted successfully`);
         } else {
             req.flash('error', 'Error deleting bottle');
         }
-        
+
         res.redirect('/bottles');
 
     } catch (error) {
@@ -264,18 +266,18 @@ router.post('/:id/status', isAuthenticated, async (req, res) => {
         const bottleId = req.params.id;
 
         if (!['AtPlant', 'AtCustomer', 'AtVehicle'].includes(status)) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Invalid status' 
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid status'
             });
         }
 
         const updatedBottle = await Bottle.update(bottleId, { status }, req.session.user.id);
 
         if (!updatedBottle) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Bottle not found' 
+            return res.status(404).json({
+                success: false,
+                message: 'Bottle not found'
             });
         }
 
@@ -298,7 +300,7 @@ router.post('/:id/status', isAuthenticated, async (req, res) => {
 router.post('/bulk-action', isAuthenticated, csrfProtection, async (req, res) => {
     try {
         const { action, bottleIds } = req.body;
-        
+
         if (!bottleIds || !Array.isArray(bottleIds) || bottleIds.length === 0) {
             req.flash('error', 'No bottles selected');
             return res.redirect('/bottles');
@@ -342,7 +344,7 @@ router.post('/bulk-action', isAuthenticated, csrfProtection, async (req, res) =>
 router.get('/search/qr/:code', isAuthenticated, async (req, res) => {
     try {
         const bottle = await Bottle.findByCode(req.params.code);
-        
+
         if (!bottle) {
             return res.status(404).json({
                 success: false,
@@ -368,9 +370,9 @@ router.get('/search/qr/:code', isAuthenticated, async (req, res) => {
 router.get('/export', isAuthenticated, async (req, res) => {
     try {
         const bottles = await Bottle.getAll({ limit: 10000 }); // Get all bottles
-        
+
         let csvContent = 'Bottle Code,Type,Status,Description,Manufacturing Date,Expiry Date,Batch Number,Created At\n';
-        
+
         bottles.forEach(bottle => {
             const bottleData = bottle.toJSON ? bottle.toJSON() : bottle;
             csvContent += `"${bottleData.bottleCode}","${bottleData.bottleType}","${bottleData.status}","${bottleData.description || ''}","${bottleData.manufacturingDate}","${bottleData.expiryDate}","${bottleData.batchNumber || ''}","${bottleData.createdAt}"\n`;
@@ -391,9 +393,9 @@ router.get('/export', isAuthenticated, async (req, res) => {
 router.get('/api/validate/:bottleCode', isAuthenticated, async (req, res) => {
     try {
         const { bottleCode } = req.params;
-        
+
         const bottle = await Bottle.findByCode(bottleCode);
-        
+
         if (!bottle) {
             return res.json({
                 success: false,

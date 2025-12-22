@@ -124,6 +124,8 @@ const csrfProtection = (req, res, next) => {
         if (!sessionToken || sessionToken !== bodyToken) {
             return res.status(403).json({ error: 'Invalid CSRF token' });
         }
+        // Make token available for re-rendering forms on error
+        res.locals.csrfToken = sessionToken;
     }
     next();
 };
