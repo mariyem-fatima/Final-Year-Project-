@@ -216,6 +216,13 @@
         }
 
         function startScanner() {
+            // If scanner already exists, stop it first
+            if (html5QrcodeScanner) {
+                console.log('Scanner already exists, stopping first...');
+                stopScanner();
+                return;
+            }
+
             const config = { fps: 10, qrbox: { width: 250, height: 250 } };
             
             html5QrcodeScanner = new Html5Qrcode("qr-reader");
@@ -225,26 +232,39 @@
                 config,
                 onScanSuccess,
                 onScanFailure
-            ).catch(err => {
+            ).then(() => {
+                // Scanner started successfully
+                document.getElementById('startScanBtn').style.display = 'none';
+                document.getElementById('stopScanBtn').style.display = 'inline-block';
+            }).catch(err => {
                 console.error('Scanner start failed:', err);
                 alert('Failed to start camera. Please check camera permissions.');
+                html5QrcodeScanner = null;
             });
-
-            document.getElementById('startScanBtn').style.display = 'none';
-            document.getElementById('stopScanBtn').style.display = 'inline-block';
         }
 
         function stopScanner() {
             if (html5QrcodeScanner) {
                 html5QrcodeScanner.stop().then(() => {
                     html5QrcodeScanner.clear();
+                    html5QrcodeScanner = null;
+                    
+                    // Update button visibility after successful stop
+                    document.getElementById('startScanBtn').style.display = 'inline-block';
+                    document.getElementById('stopScanBtn').style.display = 'none';
                 }).catch(err => {
                     console.error('Scanner stop failed:', err);
+                    html5QrcodeScanner = null;
+                    
+                    // Update button visibility even if stop fails
+                    document.getElementById('startScanBtn').style.display = 'inline-block';
+                    document.getElementById('stopScanBtn').style.display = 'none';
                 });
+            } else {
+                // No scanner to stop, just update buttons
+                document.getElementById('startScanBtn').style.display = 'inline-block';
+                document.getElementById('stopScanBtn').style.display = 'none';
             }
-
-            document.getElementById('startScanBtn').style.display = 'inline-block';
-            document.getElementById('stopScanBtn').style.display = 'none';
         }
 
         function onScanSuccess(decodedText, decodedResult) {
