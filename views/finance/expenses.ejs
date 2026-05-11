@@ -40,7 +40,7 @@
                         <div class="card-body text-center" style="background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%); color: white;">
                             <i class="bi bi-credit-card fs-1 mb-2"></i>
                             <% const totalExpenses = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0); %>
-                            <h3 class="card-title mb-1">$<%= totalExpenses.toFixed(2) %></h3>
+                            <h3 class="card-title mb-1">Rs. <%= totalExpenses.toFixed(2) %></h3>
                             <p class="card-text opacity-75">Total Expenses</p>
                         </div>
                     </div>
@@ -60,7 +60,7 @@
                             <i class="bi bi-calendar-month fs-1 mb-2"></i>
                             <% const thisMonth = new Date().toISOString().slice(0, 7); %>
                             <% const monthlyExpenses = expenses.filter(exp => exp.transaction_date.slice(0, 7) === thisMonth).reduce((sum, exp) => sum + parseFloat(exp.amount), 0); %>
-                            <h3 class="card-title mb-1">$<%= monthlyExpenses.toFixed(2) %></h3>
+                            <h3 class="card-title mb-1">Rs. <%= monthlyExpenses.toFixed(2) %></h3>
                             <p class="card-text opacity-75">This Month</p>
                         </div>
                     </div>
@@ -111,7 +111,7 @@
                                         <%= expense.description || 'No description' %>
                                     </td>
                                     <td>
-                                        <h6 class="text-danger mb-0">-$<%= parseFloat(expense.amount).toFixed(2) %></h6>
+                                        <h6 class="text-danger mb-0">-Rs. <%= parseFloat(expense.amount).toFixed(2) %></h6>
                                     </td>
                                     <td>
                                         <small><%= expense.created_by_email || 'System' %></small>
@@ -170,7 +170,7 @@
                             <div class="mb-3">
                                 <label for="amount" class="form-label">Amount <span class="text-danger">*</span></label>
                                 <div class="input-group">
-                                    <span class="input-group-text">$</span>
+                                    <span class="input-group-text">Rs. </span>
                                     <input type="number" class="form-control" name="amount" step="0.01" min="0" required>
                                 </div>
                             </div>

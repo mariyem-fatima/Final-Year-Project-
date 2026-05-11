@@ -39,7 +39,7 @@
                     <div class="card border-0 shadow-sm">
                         <div class="card-body text-center" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white;">
                             <i class="bi bi-cash-stack fs-1 mb-2"></i>
-                            <h4 class="card-title mb-1">$<%= (overview.total_revenue || 0).toLocaleString() %></h4>
+                            <h4 class="card-title mb-1">Rs. <%= (overview.total_revenue || 0).toLocaleString() %></h4>
                             <p class="card-text opacity-75">Total Revenue (30 days)</p>
                         </div>
                     </div>
@@ -48,7 +48,7 @@
                     <div class="card border-0 shadow-sm">
                         <div class="card-body text-center" style="background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%); color: white;">
                             <i class="bi bi-credit-card fs-1 mb-2"></i>
-                            <h4 class="card-title mb-1">$<%= (overview.total_expenses_amount || 0).toLocaleString() %></h4>
+                            <h4 class="card-title mb-1">Rs. <%= (overview.total_expenses_amount || 0).toLocaleString() %></h4>
                             <p class="card-text opacity-75">Total Expenses (30 days)</p>
                         </div>
                     </div>
@@ -57,7 +57,7 @@
                     <div class="card border-0 shadow-sm">
                         <div class="card-body text-center" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%); color: white;">
                             <i class="bi bi-clock-history fs-1 mb-2"></i>
-                            <h4 class="card-title mb-1">$<%= (overview.pending_revenue || 0).toLocaleString() %></h4>
+                            <h4 class="card-title mb-1">Rs. <%= (overview.pending_revenue || 0).toLocaleString() %></h4>
                             <p class="card-text opacity-75">Pending Payments</p>
                         </div>
                     </div>
@@ -67,7 +67,7 @@
                         <div class="card-body text-center" style="background: linear-gradient(135deg, #6610f2 0%, #6f42c1 100%); color: white;">
                             <i class="bi bi-graph-up fs-1 mb-2"></i>
                             <% const profit = (overview.total_revenue || 0) - (overview.total_expenses_amount || 0); %>
-                            <h4 class="card-title mb-1">$<%= profit.toLocaleString() %></h4>
+                            <h4 class="card-title mb-1">Rs. <%= profit.toLocaleString() %></h4>
                             <p class="card-text opacity-75">Net Profit (30 days)</p>
                         </div>
                     </div>
@@ -127,7 +127,7 @@
                                     <small class="text-muted">Active Packages</small>
                                 </div>
                                 <div class="col-4">
-                                    <h4 class="text-success">$<%= (packageOverview.total_monthly_revenue || 0).toLocaleString() %></h4>
+                                    <h4 class="text-success">Rs. <%= (packageOverview.total_monthly_revenue || 0).toLocaleString() %></h4>
                                     <small class="text-muted">Monthly Revenue</small>
                                 </div>
                                 <div class="col-4">
@@ -169,7 +169,7 @@
                                         <tr>
                                             <td><strong><%= payment.order_number %></strong></td>
                                             <td><%= payment.customer_name %></td>
-                                            <td class="text-success">$<%= parseFloat(payment.total_amount).toFixed(2) %></td>
+                                            <td class="text-success">Rs. <%= parseFloat(payment.total_amount).toFixed(2) %></td>
                                             <td>
                                                 <small class="text-muted">
                                                     <%= new Date(payment.actual_delivery_time).toLocaleDateString() %>
@@ -246,7 +246,7 @@
                                                 <small><%= transaction.description || 'No description' %></small>
                                             </td>
                                             <td class="<%= transaction.transaction_type === 'income' ? 'text-success' : 'text-danger' %>">
-                                                <%= transaction.transaction_type === 'income' ? '+' : '-' %>$<%= parseFloat(transaction.amount).toFixed(2) %>
+                                                <%= transaction.transaction_type === 'income' ? '+' : '-' %>Rs. <%= parseFloat(transaction.amount).toFixed(2) %>
                                             </td>
                                             <td>
                                                 <span class="badge bg-<%= transaction.payment_status === 'completed' ? 'success' : 'warning' %>">

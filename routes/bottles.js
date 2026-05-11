@@ -118,6 +118,29 @@ router.post('/add',
     }
 );
 
+// Export bottles data (CSV format)
+router.get('/export', isAuthenticated, async (req, res) => {
+    try {
+        const bottles = await Bottle.getAll({ limit: 10000 }); // Get all bottles
+
+        let csvContent = 'Bottle Code,Type,Status,Description,Manufacturing Date,Expiry Date,Batch Number,Created At\n';
+
+        bottles.forEach(bottle => {
+            const bottleData = bottle.toJSON ? bottle.toJSON() : bottle;
+            csvContent += `"${bottleData.bottleCode}","${bottleData.bottleType}","${bottleData.status}","${bottleData.description || ''}","${bottleData.manufacturingDate}","${bottleData.expiryDate}","${bottleData.batchNumber || ''}","${bottleData.createdAt}"\n`;
+        });
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="bottles-export-${new Date().toISOString().split('T')[0]}.csv"`);
+        res.send(csvContent);
+
+    } catch (error) {
+        console.error('Export error:', error);
+        req.flash('error', 'Error exporting bottles data');
+        res.redirect('/bottles');
+    }
+});
+
 // Bottle detail view
 router.get('/:id', isAuthenticated, csrfProtection, async (req, res) => {
     try {
@@ -363,29 +386,6 @@ router.get('/search/qr/:code', isAuthenticated, async (req, res) => {
             success: false,
             message: 'Error searching for bottle'
         });
-    }
-});
-
-// Export bottles data (CSV format)
-router.get('/export', isAuthenticated, async (req, res) => {
-    try {
-        const bottles = await Bottle.getAll({ limit: 10000 }); // Get all bottles
-
-        let csvContent = 'Bottle Code,Type,Status,Description,Manufacturing Date,Expiry Date,Batch Number,Created At\n';
-
-        bottles.forEach(bottle => {
-            const bottleData = bottle.toJSON ? bottle.toJSON() : bottle;
-            csvContent += `"${bottleData.bottleCode}","${bottleData.bottleType}","${bottleData.status}","${bottleData.description || ''}","${bottleData.manufacturingDate}","${bottleData.expiryDate}","${bottleData.batchNumber || ''}","${bottleData.createdAt}"\n`;
-        });
-
-        res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', `attachment; filename="bottles-export-${new Date().toISOString().split('T')[0]}.csv"`);
-        res.send(csvContent);
-
-    } catch (error) {
-        console.error('Export error:', error);
-        req.flash('error', 'Error exporting bottles data');
-        res.redirect('/bottles');
     }
 });
 

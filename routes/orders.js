@@ -413,22 +413,98 @@ router.post('/bulk/status', async (req, res) => {
 // Get delivery routes
 router.get('/routes', async (req, res) => {
     try {
-        // Mock route data - in a real app this would come from a routes table
-        const routes = [];
+        const { pool } = require('../models/database');
+        
         const filters = {
-            date: req.query.date || '',
+            date: req.query.date || moment().format('YYYY-MM-DD'),
             status: req.query.status || '',
             vehicle: req.query.vehicle || '',
             area: req.query.area || ''
         };
-        const vehicles = []; // Mock data - would be from vehicles table
         
+        // Build dynamic WHERE clause based on filters
+        let whereClause = 'WHERE oa.assigned_date = $1';
+        const params = [filters.date];
+        let paramIdx = 2;
+        
+        if (filters.vehicle) {
+            whereClause += ` AND oa.vehicle_id = $${paramIdx}`;
+            params.push(filters.vehicle);
+            paramIdx++;
+        }
+
+        // Fetch grouped routes from order_assignments
+        const routesQuery = await pool.query(`
+            SELECT 
+                oa.driver_id,
+                oa.vehicle_id,
+                oa.assigned_date as route_date,
+                d.full_name as driver_name,
+                v.license_plate as vehicle_info,
+                COUNT(oa.id) as total_stops,
+                SUM(CASE WHEN oa.delivery_status IN ('delivered', 'completed') THEN 1 ELSE 0 END) as completed_stops,
+                SUM(o.quantity_per_delivery) as total_bottles,
+                CASE 
+                    WHEN COUNT(oa.id) = SUM(CASE WHEN oa.delivery_status IN ('delivered', 'completed') THEN 1 ELSE 0 END) THEN 'completed'
+                    WHEN SUM(CASE WHEN oa.delivery_status = 'in_progress' THEN 1 ELSE 0 END) > 0 THEN 'in-progress'
+                    WHEN SUM(CASE WHEN oa.delivery_status IN ('delivered', 'completed') THEN 1 ELSE 0 END) > 0 THEN 'in-progress'
+                    ELSE 'pending'
+                END as status,
+                json_agg(
+                    json_build_object(
+                        'id', oa.id,
+                        'delivery_status', oa.delivery_status,
+                        'customer_name', c.full_name,
+                        'address', COALESCE(o.delivery_address, c.address_line1),
+                        'bottle_type', o.bottle_type,
+                        'quantity', o.quantity_per_delivery,
+                        'estimated_time', oa.estimated_delivery_time
+                    ) ORDER BY oa.delivery_sequence ASC, oa.id ASC
+                ) as stops
+            FROM order_assignments oa
+            LEFT JOIN orders o ON oa.order_id = o.id
+            LEFT JOIN drivers d ON oa.driver_id = d.id
+            LEFT JOIN vehicles v ON oa.vehicle_id = v.id
+            LEFT JOIN customers c ON o.customer_id = c.id
+            ${whereClause}
+            GROUP BY oa.driver_id, oa.vehicle_id, oa.assigned_date, d.full_name, v.license_plate
+        `, params);
+        
+        let routes = routesQuery.rows.map(row => {
+            row.id = `${row.driver_id}_${moment(row.route_date).format('YYYYMMDD')}`;
+            row.route_number = row.id;
+            
+            row.current_stop_index = row.stops.findIndex(s => s.delivery_status === 'in_progress');
+            if (row.current_stop_index === -1) {
+                row.current_stop_index = row.stops.findIndex(s => s.delivery_status === 'assigned');
+            }
+            
+            return row;
+        });
+
+        // Filter by status if requested
+        if (filters.status) {
+            routes = routes.filter(r => r.status === filters.status);
+        }
+        
+        // Fetch vehicles and their assigned drivers
+        const vehiclesQuery = await pool.query(`
+            SELECT v.*, d.full_name as driver_name 
+            FROM vehicles v
+            LEFT JOIN drivers d ON v.id = d.assigned_vehicle_id
+            WHERE v.status = 'active'
+            ORDER BY v.license_plate
+        `);
+        const vehicles = vehiclesQuery.rows;
+        
+        const totalDeliveries = routes.reduce((sum, r) => sum + parseInt(r.total_stops || 0), 0);
+
         res.render('orders/delivery-routes', {
             title: 'Delivery Routes',
             routes,
             filters,
             vehicles,
-            totalDeliveries: 0,
+            totalDeliveries,
             currentUser: req.session.user
         });
     } catch (error) {
@@ -438,9 +514,30 @@ router.get('/routes', async (req, res) => {
     }
 });
 
+// Create delivery route (Basic implementation)
+router.post('/routes/create', async (req, res) => {
+    try {
+        const { route_date, vehicle_id, area, max_stops, auto_assign } = req.body;
+        
+        if (auto_assign === 'on' || auto_assign === true || auto_assign === 'true') {
+            const OrderAssignment = require('../models/OrderAssignment');
+            await OrderAssignment.autoAssignOrders(route_date, {
+                maxOrdersPerDriver: parseInt(max_stops) || 20,
+                userId: req.user.id
+            });
+        }
+        
+        res.json({ success: true, message: 'Route created successfully' });
+    } catch (error) {
+        console.error('Error creating route:', error);
+        res.status(500).json({ success: false, message: error.message || 'Failed to create route' });
+    }
+});
+
 // Generate delivery route optimization (basic algorithm)
 router.get('/delivery/optimize', async (req, res) => {
     try {
+        const { pool } = require('../models/database');
         const date = req.query.date || moment().format('YYYY-MM-DD');
         const orders = await Order.getDueForDelivery(date);
         
@@ -461,6 +558,16 @@ router.get('/delivery/optimize', async (req, res) => {
                 return priorityOrder[b.priority_level] - priorityOrder[a.priority_level];
             });
         });
+        
+        // Fetch vehicles and their assigned drivers
+        const vehiclesQuery = await pool.query(`
+            SELECT v.*, d.full_name as driver_name 
+            FROM vehicles v
+            LEFT JOIN drivers d ON v.id = d.assigned_vehicle_id
+            WHERE v.status = 'active'
+            ORDER BY v.license_plate
+        `);
+        const vehicles = vehiclesQuery.rows;
 
         res.render('orders/delivery-routes', {
             title: `Delivery Routes - ${moment(date).format('MMMM Do, YYYY')}`,
@@ -471,7 +578,7 @@ router.get('/delivery/optimize', async (req, res) => {
                 vehicle: req.query.vehicle || '',
                 area: req.query.area || ''
             },
-            vehicles: [], // Mock data - would be from vehicles table
+            vehicles: vehicles,
             totalDeliveries: orders.length,
             routeGroups,
             date,

@@ -615,6 +615,33 @@ class OrderAssignment {
             const deliveryNotes = notes ? `Delivered with bottles: ${bottleCodes.join(', ')}. ${notes}` : `Delivered with bottles: ${bottleCodes.join(', ')}`;
             const result = await client.query(updateQuery, [assignmentId, deliveryNotes]);
 
+            // Update order status and counters
+            const orderUpdateQuery = `
+                UPDATE orders 
+                SET bottles_delivered = bottles_delivered + quantity_per_delivery,
+                    bottles_remaining = bottles_remaining - quantity_per_delivery,
+                    order_status = CASE 
+                        WHEN bottles_remaining - quantity_per_delivery <= 0 THEN 'completed'
+                        ELSE 'in-progress'
+                    END,
+                    last_delivery_date = CURRENT_DATE,
+                    next_delivery_date = CASE 
+                        WHEN order_type = 'subscription' AND bottles_remaining - quantity_per_delivery > 0 
+                        THEN CASE subscription_type
+                            WHEN 'monthly' THEN CURRENT_DATE + INTERVAL '1 month'
+                            WHEN 'parallel-1day' THEN CURRENT_DATE + INTERVAL '1 day'
+                            WHEN 'parallel-2day' THEN CURRENT_DATE + INTERVAL '2 days'
+                            WHEN 'parallel-3day' THEN CURRENT_DATE + INTERVAL '3 days'
+                            ELSE next_delivery_date
+                        END
+                        ELSE NULL
+                    END,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = $1
+            `;
+            
+            await client.query(orderUpdateQuery, [assignment.order_id]);
+
             await client.query('COMMIT');
 
             return {

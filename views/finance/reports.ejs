@@ -71,7 +71,7 @@
                     <div class="card border-0 shadow-sm">
                         <div class="card-body text-center" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white;">
                             <i class="bi bi-cash-stack fs-1 mb-2"></i>
-                            <h3 class="card-title mb-1">$<%= reportData.totalRevenue.toFixed(2) %></h3>
+                            <h3 class="card-title mb-1">Rs. <%= reportData.totalRevenue.toFixed(2) %></h3>
                             <p class="card-text opacity-75">Total Revenue</p>
                             <small class="opacity-50">
                                 <% const revenueChange = reportData.revenueChange || 0; %>
@@ -84,7 +84,7 @@
                     <div class="card border-0 shadow-sm">
                         <div class="card-body text-center" style="background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%); color: white;">
                             <i class="bi bi-credit-card fs-1 mb-2"></i>
-                            <h3 class="card-title mb-1">$<%= reportData.totalExpenses.toFixed(2) %></h3>
+                            <h3 class="card-title mb-1">Rs. <%= reportData.totalExpenses.toFixed(2) %></h3>
                             <p class="card-text opacity-75">Total Expenses</p>
                             <small class="opacity-50">
                                 <% const expenseChange = reportData.expenseChange || 0; %>
@@ -98,7 +98,7 @@
                         <div class="card-body text-center" style="background: linear-gradient(135deg, #6610f2 0%, #6f42c1 100%); color: white;">
                             <i class="bi bi-graph-up fs-1 mb-2"></i>
                             <% const netProfit = reportData.totalRevenue - reportData.totalExpenses; %>
-                            <h3 class="card-title mb-1">$<%= netProfit.toFixed(2) %></h3>
+                            <h3 class="card-title mb-1">Rs. <%= netProfit.toFixed(2) %></h3>
                             <p class="card-text opacity-75">Net Profit</p>
                             <small class="opacity-50">
                                 <% const profitMargin = reportData.totalRevenue > 0 ? (netProfit / reportData.totalRevenue * 100) : 0; %>
@@ -115,7 +115,7 @@
                             <p class="card-text opacity-75">Orders Completed</p>
                             <small class="opacity-50">
                                 <% const avgOrderValue = reportData.totalOrders > 0 ? (reportData.totalRevenue / reportData.totalOrders) : 0; %>
-                                $<%= avgOrderValue.toFixed(2) %> avg order value
+                                Rs. <%= avgOrderValue.toFixed(2) %> avg order value
                             </small>
                         </div>
                     </div>
@@ -183,7 +183,7 @@
                                                     <small class="text-muted"><%= transaction.payment_method %></small>
                                                 </td>
                                                 <td class="text-end">
-                                                    <span class="text-success fw-bold">+$<%= parseFloat(transaction.amount).toFixed(2) %></span>
+                                                    <span class="text-success fw-bold">+Rs. <%= parseFloat(transaction.amount).toFixed(2) %></span>
                                                 </td>
                                             </tr>
                                             <% }); %>
@@ -230,7 +230,7 @@
                                                     <small class="text-muted"><%= transaction.description %></small>
                                                 </td>
                                                 <td class="text-end">
-                                                    <span class="text-danger fw-bold">-$<%= parseFloat(transaction.amount).toFixed(2) %></span>
+                                                    <span class="text-danger fw-bold">-Rs. <%= parseFloat(transaction.amount).toFixed(2) %></span>
                                                 </td>
                                             </tr>
                                             <% }); %>
@@ -304,7 +304,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return '$' + value.toFixed(0);
+                            return 'Rs. ' + value.toFixed(0);
                         }
                     }
                 }

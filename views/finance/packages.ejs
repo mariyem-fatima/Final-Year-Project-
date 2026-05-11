@@ -70,7 +70,7 @@
                         <div class="card-body text-center" style="background: linear-gradient(135deg, #6610f2 0%, #6f42c1 100%); color: white;">
                             <i class="bi bi-cash-stack fs-1 mb-2"></i>
                             <% const totalRevenue = packages.reduce((sum, pkg) => sum + parseFloat(pkg.package_amount), 0); %>
-                            <h3 class="card-title mb-1">$<%= totalRevenue.toFixed(2) %></h3>
+                            <h3 class="card-title mb-1">Rs. <%= totalRevenue.toFixed(2) %></h3>
                             <p class="card-text opacity-75">Total Value</p>
                         </div>
                     </div>
@@ -125,7 +125,7 @@
                                         <small class="text-muted"><%= package.description || 'No description' %></small>
                                     </td>
                                     <td>
-                                        <h6 class="text-success mb-0">$<%= parseFloat(package.package_amount).toFixed(2) %></h6>
+                                        <h6 class="text-success mb-0">Rs. <%= parseFloat(package.package_amount).toFixed(2) %></h6>
                                     </td>
                                     <td>
                                         <%= new Date(package.start_date).toLocaleDateString() %>
@@ -232,7 +232,7 @@
                             <div class="mb-3">
                                 <label for="package_amount" class="form-label">Package Amount <span class="text-danger">*</span></label>
                                 <div class="input-group">
-                                    <span class="input-group-text">$</span>
+                                    <span class="input-group-text">Rs. </span>
                                     <input type="number" class="form-control" name="package_amount" step="0.01" min="0" required>
                                 </div>
                             </div>
@@ -297,7 +297,7 @@
                     <div class="mb-3">
                         <label for="payment_amount" class="form-label">Payment Amount</label>
                         <div class="input-group">
-                            <span class="input-group-text">$</span>
+                            <span class="input-group-text">Rs. </span>
                             <input type="number" class="form-control" name="payment_amount" step="0.01" required>
                         </div>
                     </div>

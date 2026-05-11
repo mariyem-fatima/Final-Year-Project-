@@ -71,7 +71,7 @@
                     <div class="card-body text-center" style="background: linear-gradient(135deg, #6610f2 0%, #6f42c1 100%); color: white;">
                         <i class="bi bi-cash-stack fs-1 mb-2"></i>
                         <% const totalSalary = staffMembers ? staffMembers.reduce((sum, s) => sum + (parseFloat(s.salary) || 0), 0) : 0; %>
-                        <h3 class="card-title mb-1">$<%= totalSalary.toFixed(0) %></h3>
+                        <h3 class="card-title mb-1">Rs. <%= totalSalary.toFixed(0) %></h3>
                         <p class="card-text opacity-75">Total Payroll</p>
                     </div>
                 </div>
@@ -172,7 +172,7 @@
                                         </td>
                                         <td>
                                             <% if (staff.salary) { %>
-                                            <h6 class="text-success mb-0">$<%= parseFloat(staff.salary).toFixed(2) %></h6>
+                                            <h6 class="text-success mb-0">Rs. <%= parseFloat(staff.salary).toFixed(2) %></h6>
                                             <small class="text-muted">monthly</small>
                                             <% } else { %>
                                             <span class="text-muted">Not set</span>

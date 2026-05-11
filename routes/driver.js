@@ -211,12 +211,20 @@ router.post('/order/:id/delivered', isAuthenticated, canDeliverOrders, async (re
         }
 
         // Use the proper method that handles bottle status updates
-        await OrderAssignment.markDeliveredWithBottles(
+        const deliveryResult = await OrderAssignment.markDeliveredWithBottles(
             parseInt(assignmentId), 
             bottle_codes, 
             req.user.id, 
             notes || ''
         );
+
+        if (!deliveryResult.success) {
+            console.error('❌ Error in markDeliveredWithBottles:', deliveryResult.error);
+            return res.json({ 
+                success: false, 
+                error: deliveryResult.error || 'Failed to process delivery' 
+            });
+        }
 
         console.log('✅ Delivery processed successfully with bottle updates');
         res.json({ 

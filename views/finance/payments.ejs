@@ -49,7 +49,7 @@
                         <div class="card-body text-center" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white;">
                             <i class="bi bi-cash-stack fs-1 mb-2"></i>
                             <% const totalPending = pendingPayments.reduce((sum, p) => sum + parseFloat(p.total_amount), 0); %>
-                            <h3 class="card-title mb-1">$<%= totalPending.toFixed(2) %></h3>
+                            <h3 class="card-title mb-1">Rs. <%= totalPending.toFixed(2) %></h3>
                             <p class="card-text opacity-75">Total Amount Due</p>
                         </div>
                     </div>
@@ -120,7 +120,7 @@
                                         </small>
                                     </td>
                                     <td>
-                                        <h5 class="text-success mb-0">$<%= parseFloat(payment.total_amount).toFixed(2) %></h5>
+                                        <h5 class="text-success mb-0">Rs. <%= parseFloat(payment.total_amount).toFixed(2) %></h5>
                                     </td>
                                     <td>
                                         <%= payment.driver_name || 'N/A' %>
@@ -182,7 +182,7 @@
                             <div class="card-body">
                                 <p class="mb-1"><strong>Order #:</strong> <span id="modalOrderNumber"></span></p>
                                 <p class="mb-1"><strong>Customer:</strong> <span id="modalCustomerName"></span></p>
-                                <p class="mb-0"><strong>Amount Due:</strong> $<span id="modalAmount"></span></p>
+                                <p class="mb-0"><strong>Amount Due:</strong> Rs. <span id="modalAmount"></span></p>
                             </div>
                         </div>
                     </div>
@@ -202,7 +202,7 @@
                     <div class="mb-3">
                         <label for="payment_amount" class="form-label">Amount Received</label>
                         <div class="input-group">
-                            <span class="input-group-text">$</span>
+                            <span class="input-group-text">Rs. </span>
                             <input type="number" class="form-control" id="payment_amount" name="payment_amount" 
                                    step="0.01" min="0" placeholder="Leave blank for full amount">
                         </div>
@@ -286,7 +286,7 @@ document.addEventListener('DOMContentLoaded', function() {
             form.action = `/finance/payments/${assignmentId}/collect`;
             
             // Set default amount
-            document.getElementById('payment_amount').placeholder = `Full amount: $${parseFloat(amount).toFixed(2)}`;
+            document.getElementById('payment_amount').placeholder = `Full amount: Rs. ${parseFloat(amount).toFixed(2)}`;
         });
     }
 });
