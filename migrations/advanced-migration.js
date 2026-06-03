@@ -11,6 +11,9 @@ async function runAdvancedMigration() {
     try {
         console.log('🚀 Starting advanced database migration...');
         
+        // Ensure we are using the public schema and it's in our search path
+        await client.query('SET search_path TO public');
+        
         // Enable UUID extension
         await client.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
         
@@ -19,9 +22,9 @@ async function runAdvancedMigration() {
             const result = await client.query(`
                 SELECT COUNT(*) as count 
                 FROM information_schema.columns 
-                WHERE table_name = $1 AND column_name = $2
-            `, [tableName, columnName]);
-            return result.rows[0].count > 0;
+                WHERE table_name = $1 AND column_name = $2 AND table_schema = current_schema()
+            `, [tableName.toLowerCase(), columnName.toLowerCase()]);
+            return parseInt(result.rows[0].count) > 0;
         };
         
         // Helper function to check if table exists
@@ -29,9 +32,9 @@ async function runAdvancedMigration() {
             const result = await client.query(`
                 SELECT COUNT(*) as count 
                 FROM information_schema.tables 
-                WHERE table_name = $1 AND table_schema = 'public'
-            `, [tableName]);
-            return result.rows[0].count > 0;
+                WHERE table_name = $1 AND table_schema = current_schema()
+            `, [tableName.toLowerCase()]);
+            return parseInt(result.rows[0].count) > 0;
         };
 
         // 1. Users table - Core authentication
