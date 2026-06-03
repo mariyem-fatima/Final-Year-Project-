@@ -131,9 +131,9 @@
                                 <div class="mb-3">
                                     <label class="form-label fw-bold">Phone Number</label>
                                     <p class="mb-0">
-                                        <% if (staff.phone) { %>
-                                            <a href="tel:<%= staff.phone %>" class="text-decoration-none">
-                                                <i class="bi bi-telephone me-1"></i><%= staff.phone %>
+                                        <% if (staff.phone_primary) { %>
+                                            <a href="tel:<%= staff.phone_primary %>" class="text-decoration-none">
+                                                <i class="bi bi-telephone me-1"></i><%= staff.phone_primary %>
                                             </a>
                                         <% } else { %>
                                             <span class="text-muted">Not provided</span>
@@ -145,9 +145,9 @@
                                 <div class="mb-3">
                                     <label class="form-label fw-bold">Emergency Contact</label>
                                     <p class="mb-0">
-                                        <% if (staff.emergency_contact) { %>
-                                            <a href="tel:<%= staff.emergency_contact %>" class="text-decoration-none">
-                                                <i class="bi bi-telephone-fill me-1"></i><%= staff.emergency_contact %>
+                                        <% if (staff.emergency_contact_phone) { %>
+                                            <a href="tel:<%= staff.emergency_contact_phone %>" class="text-decoration-none">
+                                                <i class="bi bi-telephone-fill me-1"></i><%= staff.emergency_contact_phone %>
                                             </a>
                                         <% } else { %>
                                             <span class="text-muted">Not provided</span>
@@ -173,8 +173,8 @@
                                 <div class="mb-3">
                                     <label class="form-label fw-bold">Address</label>
                                     <p class="mb-0">
-                                        <% if (staff.address) { %>
-                                            <%= staff.address %>
+                                        <% if (staff.address_line1) { %>
+                                            <%= staff.address_line1 %>
                                         <% } else { %>
                                             <span class="text-muted">Not provided</span>
                                         <% } %>
@@ -379,8 +379,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <form action="/staff/<%= staff.id %>" method="POST" class="d-inline">
-                        <input type="hidden" name="_method" value="DELETE">
+                    <form action="/staff/<%= staff.id %>/delete" method="POST" class="d-inline">
                         <button type="submit" class="btn btn-danger">
                             <i class="bi bi-trash me-1"></i>Delete Staff
                         </button>

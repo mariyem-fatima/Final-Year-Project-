@@ -293,38 +293,35 @@
                 return false;
             }
 
-            // Validate phone number format
-            const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
-            if (!phoneRegex.test(phone.replace(/[\s\-\(\)]/g, ''))) {
+            // Validate phone number format (03005356764 format)
+            const phoneRegex = /^0\d{10}$/;
+            if (!phoneRegex.test(phone)) {
                 e.preventDefault();
-                alert('Please enter a valid phone number');
+                alert('Please enter a valid 11-digit phone number starting with 0 (e.g., 03005356764)');
                 return false;
             }
         });
 
-        // Auto-format phone number
-        const phoneInput = document.getElementById('phone');
-        phoneInput.addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\D/g, '');
-            if (value.length >= 6) {
-                value = value.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3');
-            } else if (value.length >= 3) {
-                value = value.replace(/(\d{3})(\d{0,3})/, '($1) $2');
-            }
-            e.target.value = value;
-        });
+        // Auto-format phone number to 03005356764 format
+        const formatPhoneNumber = (input) => {
+            input.addEventListener('input', function(e) {
+                // Remove all non-digit characters
+                let value = e.target.value.replace(/\D/g, '');
+                
+                // Limit to 11 digits (typical Pakistan phone number length)
+                if (value.length > 11) {
+                    value = value.slice(0, 11);
+                }
+                
+                e.target.value = value;
+            });
+        };
 
-        // Emergency contact formatting
+        const phoneInput = document.getElementById('phone');
         const emergencyInput = document.getElementById('emergency_contact');
-        emergencyInput.addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\D/g, '');
-            if (value.length >= 6) {
-                value = value.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3');
-            } else if (value.length >= 3) {
-                value = value.replace(/(\d{3})(\d{0,3})/, '($1) $2');
-            }
-            e.target.value = value;
-        });
+        
+        formatPhoneNumber(phoneInput);
+        formatPhoneNumber(emergencyInput);
     });
     </script>
 

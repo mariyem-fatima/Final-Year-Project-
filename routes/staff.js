@@ -80,6 +80,10 @@ router.post('/', async (req, res) => {
             notes
         } = req.body;
 
+        // Clean phone numbers (keep only digits)
+        const cleanPhone = phone ? phone.replace(/\D/g, '') : null;
+        const cleanEmergency = emergency_contact ? emergency_contact.replace(/\D/g, '') : null;
+
         // Check if employee_id already exists
         const existingStaff = await pool.query(
             'SELECT id FROM staff WHERE employee_id = $1',
@@ -94,27 +98,25 @@ router.post('/', async (req, res) => {
         // Create staff member
         const insertQuery = `
             INSERT INTO staff (
-                full_name, employee_id, phone, emergency_contact, address,
-                position, department, hire_date, salary, work_schedule,
-                status, user_id, permissions, notes, created_at, updated_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW())
+                full_name, employee_id, phone_primary, emergency_contact_phone, address_line1,
+                position, department, hire_date, salary_amount, status, user_id, notes, 
+                created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
             RETURNING id
         `;
 
         const values = [
             full_name,
             employee_id,
-            phone || null,
-            emergency_contact || null,
+            cleanPhone,
+            cleanEmergency,
             address || null,
             position,
             department || null,
             hire_date || null,
             salary || null,
-            work_schedule || null,
             status || 'active',
             user_id || null,
-            permissions || 'basic',
             notes || null
         ];
 
@@ -224,7 +226,7 @@ router.get('/:id/edit', async (req, res) => {
 });
 
 // Update staff
-router.put('/:id', async (req, res) => {
+router.post('/:id/edit', async (req, res) => {
     try {
         const staffId = req.params.id;
         const {
@@ -244,6 +246,10 @@ router.put('/:id', async (req, res) => {
             notes
         } = req.body;
 
+        // Clean phone numbers (keep only digits)
+        const cleanPhone = phone ? phone.replace(/\D/g, '') : null;
+        const cleanEmergency = emergency_contact ? emergency_contact.replace(/\D/g, '') : null;
+
         // Check if employee_id already exists for different staff
         const existingStaff = await pool.query(
             'SELECT id FROM staff WHERE employee_id = $1 AND id != $2',
@@ -260,36 +266,32 @@ router.put('/:id', async (req, res) => {
             UPDATE staff SET
                 full_name = $1,
                 employee_id = $2,
-                phone = $3,
-                emergency_contact = $4,
-                address = $5,
+                phone_primary = $3,
+                emergency_contact_phone = $4,
+                address_line1 = $5,
                 position = $6,
                 department = $7,
                 hire_date = $8,
-                salary = $9,
-                work_schedule = $10,
-                status = $11,
-                user_id = $12,
-                permissions = $13,
-                notes = $14,
+                salary_amount = $9,
+                status = $10,
+                user_id = $11,
+                notes = $12,
                 updated_at = NOW()
-            WHERE id = $15
+            WHERE id = $13
         `;
 
         const values = [
             full_name,
             employee_id,
-            phone || null,
-            emergency_contact || null,
+            cleanPhone,
+            cleanEmergency,
             address || null,
             position,
             department || null,
             hire_date || null,
             salary || null,
-            work_schedule || null,
             status || 'active',
             user_id || null,
-            permissions || 'basic',
             notes || null,
             staffId
         ];
@@ -332,7 +334,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // Delete staff
-router.delete('/:id', async (req, res) => {
+router.post('/:id/delete', async (req, res) => {
     try {
         const staffId = req.params.id;
 
