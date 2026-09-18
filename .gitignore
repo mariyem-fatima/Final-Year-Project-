@@ -31,7 +31,6 @@ bower_components
 build/Release
 
 # Dependency directories
-node_modules/
 jspm_packages/
 
 # Optional npm cache directory
@@ -51,6 +50,8 @@ jspm_packages/
 
 # dotenv environment variables file
 .env
+.env.local
+.env.*.local
 
 # next.js build output
 .next
@@ -78,18 +79,13 @@ Thumbs.db
 *.zip
 *.mp4
 nodejs-master/
+project-run-tutorial.mp4
 
 # Database dumps (agar sensitive data ho)
 *.sql
 
 # Personal/sensitive files
 DEFAULT_USER_INFO.md
-
-# Large/unnecessary files
-*.zip
-*.mp4
-nodejs-master/
-project-run-tutorial.mp4
 
 # Internal documentation (optional - project ke liye zaroori nahi)
 FINANCIAL_SYSTEM_SUMMARY.md
