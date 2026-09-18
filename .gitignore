@@ -50,7 +50,7 @@ jspm_packages/
 .yarn-integrity
 
 # dotenv environment variables file
-# .env
+.env
 
 # next.js build output
 .next
@@ -73,3 +73,25 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Large files / not needed on GitHub
+*.zip
+*.mp4
+nodejs-master/
+
+# Database dumps (agar sensitive data ho)
+*.sql
+
+# Personal/sensitive files
+DEFAULT_USER_INFO.md
+
+# Large/unnecessary files
+*.zip
+*.mp4
+nodejs-master/
+project-run-tutorial.mp4
+
+# Internal documentation (optional - project ke liye zaroori nahi)
+FINANCIAL_SYSTEM_SUMMARY.md
+MIGRATION_SUCCESS.md
+PROJECT_SUMMARY.md
