@@ -43,7 +43,7 @@ A comprehensive Node.js Express application with multi-factor authentication and
    DB_PORT=5432
    DB_NAME=AADataBase
    DB_USER=postgres
-   DB_PASSWORD=admin
+   DB_PASSWORD=your_db_password
    ```
 
 3. **Environment Configuration**
@@ -61,7 +61,7 @@ A comprehensive Node.js Express application with multi-factor authentication and
 
 5. **Access the Application**
    - Open your browser to `http://localhost:3000`
-   - Default admin login: `admin@dashboard.com` / `admin123`
+   - - On first run, create your own admin account via the database seed script (see below)
 
 ## Database Schema
 
@@ -162,14 +162,11 @@ The application automatically creates the following tables:
 4. Configure PostgreSQL with connection pooling
 5. Set up reverse proxy (nginx) if needed
 
-## Default Admin Account
+## Admin Account Setup
 
-- **Email**: admin@dashboard.com
-- **Password**: admin123
-- **PIN**: 1234 (if needed)
-- **Role**: admin
+No default admin credentials are shipped with this repository. Create your first admin account using the database seed script, or manually insert a user record with `role = 'admin'` and a bcrypt-hashed password.
 
-**Important**: Change the default admin credentials after first login!
+**Important**: Always use a strong, unique password and change it periodically.
 
 ## Contributing
 
